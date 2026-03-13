@@ -1,5 +1,7 @@
 """Utility functions."""
 
+from src.errors import InvalidFilterError, InvalidHostError, InvalidUuidError
+
 from .validators import validate_filter, validate_host, validate_hosts, validate_uuid
 from .xml_helpers import (
     attr,
@@ -16,6 +18,10 @@ from .xml_helpers import (
 )
 
 __all__ = [
+    # Errors (re-exported for convenience)
+    "InvalidUuidError",
+    "InvalidHostError",
+    "InvalidFilterError",
     # Validators
     "validate_uuid",
     "validate_host",
