@@ -58,7 +58,7 @@ openvas-mcp-server/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md         # This document
-│   ├── phases/                 # Phase documents
+│   ├── IMPLEMENTATION_STATUS.md # Consolidated status and completion checklist
 │   ├── cli/
 │   │   ├── installation.md
 │   │   ├── usage.md
@@ -268,16 +268,10 @@ All errors provide:
 
 ---
 
-## Phases
+## Implementation Status
 
-| Phase | Focus | Document |
-|-------|-------|----------|
-| 1 | Foundation | [phases/PHASE_1.md](phases/PHASE_1.md) |
-| 2 | Service Layer | [phases/PHASE_2.md](phases/PHASE_2.md) |
-| 3 | MCP Server | [phases/PHASE_3.md](phases/PHASE_3.md) |
-| 4 | CLI | [phases/PHASE_4.md](phases/PHASE_4.md) |
-| 5 | Testing | [phases/PHASE_5.md](phases/PHASE_5.md) |
-| 6 | Documentation | [phases/PHASE_6.md](phases/PHASE_6.md) |
+Project completion and review progress are tracked in:
+- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 
 ---
 
