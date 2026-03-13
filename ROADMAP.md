@@ -95,7 +95,6 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 | `retry_max_attempts` | int | `3` |
 | `retry_initial_delay` | float | `1.0` |
 | `retry_max_delay` | float | `30.0` |
-| `idle_timeout` | int | `300` |
 
 **Configuration Sources:**
 - [ ] Environment variables (for MCP installation)

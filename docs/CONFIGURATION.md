@@ -53,14 +53,11 @@ class GvmConfig:
     # Common settings
     timeout: int = 60                    # Connection/operation timeout
     
-    # Retry settings
+    # Retry settings (triggered on error)
     retry_max_attempts: int = 3
     retry_initial_delay: float = 1.0
     retry_max_delay: float = 30.0
     retry_exponential_base: float = 2.0
-    
-    # Idle connection management
-    idle_timeout: int = 300              # Close idle connections after 5 min
 ```
 
 ---
@@ -178,7 +175,7 @@ username = "admin"
 
 ## Retry Configuration
 
-All styles support retry configuration:
+Retry is triggered **on error only** (connection failures, timeouts, etc.).
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -186,7 +183,6 @@ All styles support retry configuration:
 | `retry_initial_delay` | float | `1.0` | Initial delay in seconds |
 | `retry_max_delay` | float | `30.0` | Maximum delay between retries |
 | `retry_exponential_base` | float | `2.0` | Exponential backoff multiplier |
-| `idle_timeout` | int | `300` | Close idle connections (seconds) |
 
 ### Environment Variables
 
@@ -194,7 +190,6 @@ All styles support retry configuration:
 GVM_RETRY_MAX_ATTEMPTS=3
 GVM_RETRY_INITIAL_DELAY=1.0
 GVM_RETRY_MAX_DELAY=30.0
-GVM_IDLE_TIMEOUT=300
 ```
 
 ### Config File
@@ -205,7 +200,6 @@ max_attempts = 3
 initial_delay = 1.0
 max_delay = 30.0
 exponential_base = 2.0
-idle_timeout = 300
 ```
 
 ---
@@ -226,7 +220,6 @@ username = "admin"
 
 [retry]
 max_attempts = 3
-idle_timeout = 300
 ```
 
 ```bash
@@ -255,7 +248,6 @@ username = "mcp-service"
 max_attempts = 5
 initial_delay = 2.0
 max_delay = 60.0
-idle_timeout = 600
 ```
 
 ---
@@ -332,7 +324,6 @@ Configuration saved to ~/.config/openvas-mcp/config.toml
 | `GVM_RETRY_MAX_ATTEMPTS` | All | No | `3` |
 | `GVM_RETRY_INITIAL_DELAY` | All | No | `1.0` |
 | `GVM_RETRY_MAX_DELAY` | All | No | `30.0` |
-| `GVM_IDLE_TIMEOUT` | All | No | `300` |
 
 *Required when using that style.
 

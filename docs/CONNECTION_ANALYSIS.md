@@ -194,8 +194,6 @@ class GvmClient:
         self._gmp: Optional[Gmp] = None
         self._last_used: float = 0
         self._lock = threading.Lock()
-        self._idle_timeout = 300  # 5 minutes
-    
     def execute(self, operation: Callable[[Gmp], T]) -> T:
         with self._lock:
             self._ensure_connection()
@@ -208,14 +206,7 @@ class GvmClient:
                 raise
     
     def _ensure_connection(self):
-        """Connect if needed, reconnect if stale."""
-        now = time.time()
-        
-        # Close idle connections
-        if self._gmp and (now - self._last_used) > self._idle_timeout:
-            self._disconnect()
-        
-        # Connect if needed
+        """Connect if needed."""
         if self._gmp is None or not self._gmp.is_connected():
             self._connect_with_retry()
     
@@ -333,7 +324,6 @@ NON_RETRYABLE_PATTERNS = [
 | `is_connected() == False` | Reconnect before operation |
 | `GvmError: Remote closed` | Reconnect and retry |
 | `GvmError: Timeout` | Reconnect and retry |
-| Idle > 5 minutes | Proactive reconnect |
 | Auth failure after reconnect | Raise error (don't loop) |
 
 ### 5.2 Reconnect Flow
@@ -452,7 +442,7 @@ class GvmClient:
         self._circuit_breaker = CircuitBreaker()
         
         # Configuration
-        self._idle_timeout = config.idle_timeout or 300
+
         self._operation_timeout = config.timeout or 300
     
     def execute(
@@ -493,7 +483,7 @@ class GvmConfig:
     # Timeouts
     connection_timeout: int = 30      # Initial connection
     operation_timeout: int = 300      # Per-operation
-    idle_timeout: int = 300           # Close idle connections
+
     
     # Retry
     retry_max_attempts: int = 3
@@ -564,7 +554,7 @@ For typical MCP/CLI usage: **NOT NEEDED**.
 |---------|----------|-----------|
 | Concurrency model | Single connection + lock | gvmd is single-threaded anyway |
 | Retry mechanism | Exponential backoff (3 attempts) | Handles transient failures |
-| Reconnect trigger | On error + idle timeout | Proactive cleanup |
+| Reconnect trigger | On error | Handles failures |
 | Lock timeout | Operation timeout | Prevent indefinite blocking |
 | Circuit breaker | Optional, 5 failures | Prevent retry storms |
 

@@ -164,13 +164,6 @@ class GvmClient(ABC):
     
     def _ensure_connected(self):
         """Ensure connection is alive, reconnect if needed."""
-        now = time.time()
-        
-        # Close stale connections
-        if self._gmp and (now - self._last_used) > self._config.idle_timeout:
-            self._disconnect()
-        
-        # Connect if needed
         if self._gmp is None or not self._gmp.is_connected():
             self._connect()
     
@@ -324,9 +317,8 @@ class BaseClientConfig:
     # Timeouts (seconds)
     connection_timeout: int = 30
     operation_timeout: int = 300
-    idle_timeout: int = 300
     
-    # Retry settings
+    # Retry settings (triggered on error)
     retry_max_attempts: int = 3
     retry_initial_delay: float = 1.0
     retry_max_delay: float = 30.0
@@ -746,4 +738,4 @@ class TargetService:
 | Thread safety | `RLock` with timeout |
 | Connection pooling | **Removed** — dangerous, gvmd is single-threaded |
 | Retry | Exponential backoff (3 attempts) |
-| Reconnect | On error + idle timeout |
+| Reconnect | On error |
