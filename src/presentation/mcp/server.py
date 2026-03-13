@@ -10,6 +10,7 @@ from src.services.schedules import ScheduleService
 from src.services.system import SystemService
 from src.services.targets import TargetService
 from src.services.tasks import TaskService
+from src.services.vulns import VulnerabilityService
 
 from .toolsets.port_lists import register_port_list_tools
 from .toolsets.reports import register_report_tools
@@ -18,6 +19,7 @@ from .toolsets.schedules import register_schedule_tools
 from .toolsets.system import register_system_tools
 from .toolsets.targets import register_target_tools
 from .toolsets.tasks import register_task_tools
+from .toolsets.vulns import register_vuln_tools
 
 
 def create_server() -> FastMCP:
@@ -45,6 +47,7 @@ def create_server() -> FastMCP:
     register_scan_config_tools(server, ScanConfigService(client))
     register_port_list_tools(server, PortListService(client))
     register_schedule_tools(server, ScheduleService(client))
+    register_vuln_tools(server, VulnerabilityService(client))
 
     return server
 

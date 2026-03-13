@@ -2,7 +2,7 @@
 
 import typer
 
-from .commands import port_lists, reports, scan_configs, schedules, system, targets, tasks
+from .commands import port_lists, reports, scan_configs, schedules, system, targets, tasks, vulns
 
 app = typer.Typer(
     name="openvas",
@@ -18,6 +18,7 @@ app.add_typer(reports.app, name="report")
 app.add_typer(scan_configs.app, name="scan-config")
 app.add_typer(port_lists.app, name="port-list")
 app.add_typer(schedules.app, name="schedule")
+app.add_typer(vulns.app, name="vuln")
 
 
 @app.command()
