@@ -57,13 +57,27 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 - [ ] CI/CD setup (GitHub Actions)
 
 ### 1.2 Client Layer
-- [ ] GVM client wrapper around python-gvm
-- [ ] Connection management (socket, TLS)
-- [ ] Configuration handling (env vars, config file)
-- [ ] Error handling and retry logic
+- [ ] Abstract GvmClient base class
+- [ ] LocalSocketClient implementation (Unix socket)
+- [ ] RemoteClient implementation (TLS)
+- [ ] Client factory for config-based instantiation
+- [ ] Connection management with retry (exponential backoff)
+- [ ] Auto-reconnect on failure + idle timeout
+- [ ] RLock with timeout (no pooling)
+- [ ] Configuration handling (env vars for MCP, interactive for CLI)
 
-### 1.3 Core DTOs/Models
+### 1.3 Error Handling (see docs/ERROR_HANDLING.md)
+- [ ] Custom exception hierarchy (22 error types)
+  - ConfigurationError, ConnectionError, AuthenticationError
+  - ValidationError, ResourceError, OperationError, ServerError
+- [ ] User-friendly error messages (no internal leakage)
+- [ ] CLI hints for actionable feedback
+- [ ] GMP status code → custom error mapping
+- [ ] `translate_gvm_error()` helper function
+
+### 1.4 Core DTOs/Models
 - [ ] Define domain models (Target, Scan, Report, etc.)
+- [ ] Pydantic models for requests/responses
 - [ ] XML → Model mapping utilities
 - [ ] Model → JSON serialization
 
