@@ -59,11 +59,13 @@ class RemoteClient(GvmClient):
             Configured SSLContext or None for default.
         """
         # Check if we need custom context
-        has_custom_config = any([
-            self._config.cafile,
-            self._config.certfile,
-            self._config.keyfile,
-        ])
+        has_custom_config = any(
+            [
+                self._config.cafile,
+                self._config.certfile,
+                self._config.keyfile,
+            ]
+        )
 
         if not has_custom_config:
             return None

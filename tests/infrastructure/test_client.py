@@ -49,9 +49,7 @@ class TestGvmClientBase:
 
     @patch("src.infrastructure.client.local.UnixSocketConnection")
     @patch("src.infrastructure.client.base.Gmp")
-    def test_execute_returns_result(
-        self, mock_gmp_class, mock_socket_class, valid_local_config
-    ):
+    def test_execute_returns_result(self, mock_gmp_class, mock_socket_class, valid_local_config):
         """execute() returns operation result."""
         mock_gmp = MagicMock()
         mock_gmp.is_connected.return_value = True
@@ -95,6 +93,7 @@ class TestGvmClientBase:
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
         """execute() does not retry non-retryable errors."""
+
         def operation(gmp):
             raise GvmError("Invalid argument")
 
@@ -124,9 +123,7 @@ class TestGvmClientBase:
 
     @patch("src.infrastructure.client.local.UnixSocketConnection")
     @patch("src.infrastructure.client.base.Gmp")
-    def test_auth_failure_raises_error(
-        self, mock_gmp_class, mock_socket_class, valid_local_config
-    ):
+    def test_auth_failure_raises_error(self, mock_gmp_class, mock_socket_class, valid_local_config):
         """Authentication failure raises AuthenticationError."""
         mock_gmp = MagicMock()
         mock_gmp.is_connected.return_value = False
@@ -154,9 +151,7 @@ class TestGvmClientBase:
 
     @patch("src.infrastructure.client.local.UnixSocketConnection")
     @patch("src.infrastructure.client.base.Gmp")
-    def test_is_connected_property(
-        self, mock_gmp_class, mock_socket_class, valid_local_config
-    ):
+    def test_is_connected_property(self, mock_gmp_class, mock_socket_class, valid_local_config):
         """is_connected property reflects connection state."""
         mock_gmp = MagicMock()
         mock_gmp.is_connected.return_value = True
