@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from openvas_mcp.infrastructure import ConfigLoader, ConnectionStyle, GvmConfig
+from src.infrastructure import ConfigLoader, ConnectionStyle, GvmConfig
 
 
 class TestGvmConfig:

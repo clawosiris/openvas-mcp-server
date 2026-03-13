@@ -3,7 +3,7 @@
 ## Project Structure
 
 ```
-src/openvas_mcp/presentation/cli/
+src/presentation/cli/
 ├── __init__.py
 ├── main.py           # CLI entry point (Typer app)
 ├── config.py         # CLI configuration handling
@@ -24,7 +24,7 @@ src/openvas_mcp/presentation/cli/
 import typer
 from rich.console import Console
 
-from openvas_mcp.services.targets import TargetService
+from services.targets import TargetService
 
 app = typer.Typer(help="Target management")
 console = Console()

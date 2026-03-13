@@ -18,7 +18,7 @@ from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeCheckCommandTransform
 
 if TYPE_CHECKING:
-    from openvas_mcp.infrastructure.config import GvmConfig
+    from src.infrastructure.config import GvmConfig
 
 logger = logging.getLogger(__name__)
 

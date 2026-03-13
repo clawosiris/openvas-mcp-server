@@ -9,7 +9,7 @@ from gvm.connections import UnixSocketConnection
 from .base import GvmClient
 
 if TYPE_CHECKING:
-    from openvas_mcp.infrastructure.config import GvmConfig
+    from src.infrastructure.config import GvmConfig
 
 
 class LocalClient(GvmClient):

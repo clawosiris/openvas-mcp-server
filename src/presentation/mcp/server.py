@@ -2,7 +2,7 @@
 
 from mcp.server.fastmcp import FastMCP
 
-from openvas_mcp.infrastructure import ConfigLoader, create_client
+from src.infrastructure import ConfigLoader, create_client
 
 
 def create_server() -> FastMCP:

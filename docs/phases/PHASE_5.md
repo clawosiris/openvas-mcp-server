@@ -89,7 +89,7 @@ jobs:
       - uses: actions/setup-python@v5
       - run: pip install poetry
       - run: poetry install
-      - run: poetry run pytest --cov=openvas_mcp
+      - run: poetry run pytest --cov=src
 ```
 
 ---

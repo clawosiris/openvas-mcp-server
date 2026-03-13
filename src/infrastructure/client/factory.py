@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from openvas_mcp.infrastructure.config import ConnectionStyle, GvmConfig
+from src.infrastructure.config import ConnectionStyle, GvmConfig
 
 from .base import GvmClient
 from .local import LocalClient

@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Security",
     "Topic :: System :: Systems Administration",
 ]
-packages = [{ include = "openvas_mcp", from = "src" }]
+packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -41,8 +41,8 @@ mypy = "^1.0"
 pre-commit = "^3.0"
 
 [tool.poetry.scripts]
-openvas = "openvas_mcp.presentation.cli.main:app"
-openvas-mcp = "openvas_mcp.presentation.mcp.server:main"
+openvas = "src.presentation.cli.main:app"
+openvas-mcp = "src.presentation.mcp.server:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -73,7 +73,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["openvas_mcp"]
+known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001", "ARG002", "F841"]
@@ -108,7 +108,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["src/openvas_mcp"]
+source = ["src"]
 branch = true
 omit = ["*/tests/*", "*/__init__.py"]
 

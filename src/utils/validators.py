@@ -6,7 +6,7 @@ import ipaddress
 import re
 from collections.abc import Sequence
 
-from openvas_mcp.errors import InvalidFilterError, InvalidHostError, InvalidUuidError
+from src.errors import InvalidFilterError, InvalidHostError, InvalidUuidError
 
 # UUID pattern (GMP uses standard UUIDs)
 UUID_PATTERN = re.compile(

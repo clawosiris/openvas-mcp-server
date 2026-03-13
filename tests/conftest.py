@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openvas_mcp.infrastructure import ConnectionStyle, GvmConfig
+from src.infrastructure import ConnectionStyle, GvmConfig
 
 
 @pytest.fixture

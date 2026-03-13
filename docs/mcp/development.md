@@ -3,7 +3,7 @@
 ## Project Structure
 
 ```
-src/openvas_mcp/presentation/mcp/
+src/presentation/mcp/
 ├── __init__.py
 ├── server.py         # MCP server entry point
 └── toolsets/
@@ -21,7 +21,7 @@ src/openvas_mcp/presentation/mcp/
 # toolsets/targets.py
 from mcp.server.fastmcp import FastMCP
 
-from openvas_mcp.services.targets import TargetService
+from services.targets import TargetService
 
 def register_target_tools(server: FastMCP, service: TargetService):
     

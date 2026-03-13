@@ -6,14 +6,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from gvm.errors import GvmError
 
-from openvas_mcp.infrastructure import (
+from src.infrastructure import (
     ConnectionStyle,
     GvmConfig,
     LocalClient,
     RemoteClient,
     create_client,
 )
-from openvas_mcp.infrastructure.client.base import AuthenticationError, ConnectionError
+from src.infrastructure.client.base import AuthenticationError, ConnectionError
 
 
 class TestGvmClientBase:
@@ -28,8 +28,8 @@ class TestGvmClientBase:
         with pytest.raises(ValueError, match="Invalid configuration"):
             LocalClient(config)
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_execute_connects_on_first_call(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -47,8 +47,8 @@ class TestGvmClientBase:
             password="secret",
         )
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_execute_returns_result(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -64,8 +64,8 @@ class TestGvmClientBase:
         result = client.execute(lambda gmp: gmp.get_version())
         assert result == "22.4"
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_execute_retries_on_connection_error(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -89,8 +89,8 @@ class TestGvmClientBase:
         assert result == "success"
         assert call_count[0] == 2
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_execute_does_not_retry_non_retryable_error(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -108,8 +108,8 @@ class TestGvmClientBase:
         with pytest.raises(GvmError, match="Invalid argument"):
             client.execute(operation)
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_connection_failure_raises_error(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -122,8 +122,8 @@ class TestGvmClientBase:
         with pytest.raises(ConnectionError, match="Failed to connect"):
             client.execute(lambda gmp: gmp.get_version())
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_auth_failure_raises_error(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -137,8 +137,8 @@ class TestGvmClientBase:
         with pytest.raises(AuthenticationError, match="Authentication failed"):
             client.execute(lambda gmp: gmp.get_version())
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_disconnect(self, mock_gmp_class, mock_socket_class, valid_local_config):
         """disconnect() closes connection."""
         mock_gmp = MagicMock()
@@ -152,8 +152,8 @@ class TestGvmClientBase:
         mock_gmp.disconnect.assert_called_once()
         assert client._gmp is None
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_is_connected_property(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
@@ -172,7 +172,7 @@ class TestGvmClientBase:
 class TestLocalClient:
     """Tests for LocalClient."""
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
     def test_creates_socket_connection(self, mock_socket_class, valid_local_config):
         """LocalClient creates UnixSocketConnection."""
         client = LocalClient(valid_local_config)
@@ -187,7 +187,7 @@ class TestLocalClient:
 class TestRemoteClient:
     """Tests for RemoteClient."""
 
-    @patch("openvas_mcp.infrastructure.client.remote.TLSConnection")
+    @patch("src.infrastructure.client.remote.TLSConnection")
     def test_creates_tls_connection(self, mock_tls_class, valid_remote_config):
         """RemoteClient creates TLSConnection."""
         client = RemoteClient(valid_remote_config)
@@ -243,8 +243,8 @@ class TestClientFactory:
 class TestClientThreadSafety:
     """Tests for thread-safe operation execution."""
 
-    @patch("openvas_mcp.infrastructure.client.local.UnixSocketConnection")
-    @patch("openvas_mcp.infrastructure.client.base.Gmp")
+    @patch("src.infrastructure.client.local.UnixSocketConnection")
+    @patch("src.infrastructure.client.base.Gmp")
     def test_concurrent_execute_serialized(
         self, mock_gmp_class, mock_socket_class, valid_local_config
     ):
