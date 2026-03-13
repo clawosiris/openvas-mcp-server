@@ -2,7 +2,7 @@
 
 import typer
 
-from .commands import system, targets
+from .commands import system, targets, tasks
 
 app = typer.Typer(
     name="openvas",
@@ -13,6 +13,7 @@ app = typer.Typer(
 # Register command groups
 app.add_typer(system.app, name="system")
 app.add_typer(targets.app, name="target")
+app.add_typer(tasks.app, name="task")
 
 
 @app.command()
