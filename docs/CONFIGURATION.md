@@ -7,29 +7,25 @@
 
 ## Overview
 
-OpenVAS MCP supports three connection styles to gvmd:
+OpenVAS MCP supports two connection styles to gvmd:
 
 | Style | Use Case | Transport |
 |-------|----------|-----------|
 | **Local** | gvmd on same machine | Unix socket |
-| **Remote TLS** | gvmd on remote server | TLS over TCP |
-| **Remote SSH** | gvmd via SSH tunnel | SSH + Unix socket |
+| **Remote** | gvmd on remote server | TLS over TCP |
 
 ---
 
-## Configuration Classes
-
-### Base Configuration
+## Configuration Class
 
 ```python
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional, Literal
 from enum import Enum
 
 class ConnectionStyle(str, Enum):
     LOCAL = "local"
-    REMOTE_TLS = "remote_tls"
-    REMOTE_SSH = "remote_ssh"
+    REMOTE = "remote"
 
 
 @dataclass
@@ -46,24 +42,16 @@ class GvmConfig:
     # Local (Unix Socket) settings
     socket_path: str = "/run/gvmd/gvmd.sock"
     
-    # Remote TLS settings
-    tls_hostname: str = "127.0.0.1"
-    tls_port: int = 9390
-    tls_certfile: Optional[str] = None      # Client certificate
-    tls_cafile: Optional[str] = None        # CA certificate  
-    tls_keyfile: Optional[str] = None       # Client private key
-    tls_key_password: Optional[str] = None  # Key password (if encrypted)
-    
-    # Remote SSH settings
-    ssh_hostname: str = "127.0.0.1"
-    ssh_port: int = 22
-    ssh_username: str = "gmp"
-    ssh_password: str = ""
-    ssh_known_hosts_file: Optional[str] = None
-    ssh_auto_accept_host: bool = False
+    # Remote (TLS) settings
+    hostname: str = "127.0.0.1"
+    port: int = 9390
+    certfile: Optional[str] = None      # Client certificate
+    cafile: Optional[str] = None        # CA certificate  
+    keyfile: Optional[str] = None       # Client private key
+    key_password: Optional[str] = None  # Key password (if encrypted)
     
     # Common settings
-    timeout: int = 60                        # Connection/operation timeout
+    timeout: int = 60                    # Connection/operation timeout
     
     # Retry settings
     retry_max_attempts: int = 3
@@ -72,7 +60,7 @@ class GvmConfig:
     retry_exponential_base: float = 2.0
     
     # Idle connection management
-    idle_timeout: int = 300                  # Close idle connections after 5 min
+    idle_timeout: int = 300              # Close idle connections after 5 min
 ```
 
 ---
@@ -124,7 +112,7 @@ username = "admin"
 
 ---
 
-## Style: Remote TLS
+## Style: Remote (TLS)
 
 For gvmd on a remote server with TLS encryption.
 
@@ -132,8 +120,8 @@ For gvmd on a remote server with TLS encryption.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `style` | enum | - | Must be `remote_tls` |
-| `tls_hostname` | str | - | Remote server hostname/IP |
+| `style` | enum | - | Must be `remote` |
+| `hostname` | str | - | Remote server hostname/IP |
 | `gmp_username` | str | - | GMP authentication username |
 | `gmp_password` | str | - | GMP authentication password |
 
@@ -141,28 +129,28 @@ For gvmd on a remote server with TLS encryption.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `tls_port` | int | `9390` | GVM TLS port |
-| `tls_certfile` | str | `None` | Path to client certificate (for mTLS) |
-| `tls_cafile` | str | `None` | Path to CA certificate |
-| `tls_keyfile` | str | `None` | Path to client private key |
-| `tls_key_password` | str | `None` | Password for encrypted key |
+| `port` | int | `9390` | GVM TLS port |
+| `certfile` | str | `None` | Path to client certificate (for mTLS) |
+| `cafile` | str | `None` | Path to CA certificate |
+| `keyfile` | str | `None` | Path to client private key |
+| `key_password` | str | `None` | Password for encrypted key |
 | `timeout` | int | `60` | Operation timeout in seconds |
 
 ### Environment Variables
 
 ```bash
 # Required
-GVM_STYLE=remote_tls
-GVM_TLS_HOSTNAME=gvm.example.com
+GVM_STYLE=remote
+GVM_HOSTNAME=gvm.example.com
 GVM_USERNAME=admin
 GVM_PASSWORD=secret
 
 # Optional
-GVM_TLS_PORT=9390
-GVM_TLS_CERTFILE=/path/to/client.pem
-GVM_TLS_CAFILE=/path/to/ca.pem
-GVM_TLS_KEYFILE=/path/to/client.key
-GVM_TLS_KEY_PASSWORD=keypassword
+GVM_PORT=9390
+GVM_CERTFILE=/path/to/client.pem
+GVM_CAFILE=/path/to/ca.pem
+GVM_KEYFILE=/path/to/client.key
+GVM_KEY_PASSWORD=keypassword
 GVM_TIMEOUT=60
 ```
 
@@ -170,80 +158,16 @@ GVM_TIMEOUT=60
 
 ```toml
 [connection]
-style = "remote_tls"
+style = "remote"
+hostname = "gvm.example.com"
+port = 9390
 timeout = 60
 
 [tls]
-hostname = "gvm.example.com"
-port = 9390
 certfile = "/path/to/client.pem"
 cafile = "/path/to/ca.pem"
 keyfile = "/path/to/client.key"
-# key_password via GVM_TLS_KEY_PASSWORD env var
-
-[auth]
-username = "admin"
-# password via GVM_PASSWORD env var
-```
-
----
-
-## Style: Remote SSH
-
-For gvmd accessed via SSH tunnel (connects to socket on remote machine).
-
-### Required Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `style` | enum | - | Must be `remote_ssh` |
-| `ssh_hostname` | str | - | SSH server hostname/IP |
-| `gmp_username` | str | - | GMP authentication username |
-| `gmp_password` | str | - | GMP authentication password |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `ssh_port` | int | `22` | SSH port |
-| `ssh_username` | str | `gmp` | SSH username |
-| `ssh_password` | str | `""` | SSH password (or use key) |
-| `ssh_known_hosts_file` | str | `None` | Path to known_hosts file |
-| `ssh_auto_accept_host` | bool | `False` | Auto-accept unknown hosts (⚠️ security risk) |
-| `timeout` | int | `60` | Operation timeout in seconds |
-
-### Environment Variables
-
-```bash
-# Required
-GVM_STYLE=remote_ssh
-GVM_SSH_HOSTNAME=gvm.example.com
-GVM_USERNAME=admin
-GVM_PASSWORD=secret
-
-# Optional
-GVM_SSH_PORT=22
-GVM_SSH_USERNAME=gmp
-GVM_SSH_PASSWORD=sshpassword
-GVM_SSH_KNOWN_HOSTS=/path/to/known_hosts
-GVM_SSH_AUTO_ACCEPT_HOST=false
-GVM_TIMEOUT=60
-```
-
-### Config File (TOML)
-
-```toml
-[connection]
-style = "remote_ssh"
-timeout = 60
-
-[ssh]
-hostname = "gvm.example.com"
-port = 22
-username = "gmp"
-known_hosts_file = "/path/to/known_hosts"
-auto_accept_host = false
-# password via GVM_SSH_PASSWORD env var
+# key_password via GVM_KEY_PASSWORD env var
 
 [auth]
 username = "admin"
@@ -309,17 +233,17 @@ idle_timeout = 300
 export GVM_PASSWORD=admin
 ```
 
-### Production Remote TLS
+### Production Remote
 
 ```toml
 # /etc/openvas-mcp/config.toml
 [connection]
-style = "remote_tls"
+style = "remote"
+hostname = "gvm.prod.example.com"
+port = 9390
 timeout = 120
 
 [tls]
-hostname = "gvm.prod.example.com"
-port = 9390
 cafile = "/etc/openvas-mcp/ca.pem"
 certfile = "/etc/openvas-mcp/client.pem"
 keyfile = "/etc/openvas-mcp/client.key"
@@ -332,26 +256,6 @@ max_attempts = 5
 initial_delay = 2.0
 max_delay = 60.0
 idle_timeout = 600
-```
-
-### SSH Tunnel (Bastion Host)
-
-```toml
-[connection]
-style = "remote_ssh"
-timeout = 120
-
-[ssh]
-hostname = "bastion.example.com"
-port = 22
-username = "gvm-tunnel"
-known_hosts_file = "~/.ssh/known_hosts"
-
-[auth]
-username = "admin"
-
-[retry]
-max_attempts = 3
 ```
 
 ---
@@ -389,14 +293,13 @@ $ openvas configure
 
 OpenVAS MCP - Connection Setup
 
-Connection style [local/remote_tls/remote_ssh]: remote_tls
+Connection style [local/remote]: remote
 
-=== TLS Settings ===
+=== Remote Settings ===
 GVM hostname: gvm.example.com
 GVM port [9390]: 
 CA certificate path (optional): /path/to/ca.pem
 Client certificate path (optional): 
-Verify SSL? [Y/n]: 
 
 === Authentication ===
 GMP username [admin]: 
@@ -420,21 +323,21 @@ Configuration saved to ~/.config/openvas-mcp/config.toml
 | `GVM_PASSWORD` | All | Yes | - |
 | `GVM_TIMEOUT` | All | No | `60` |
 | `GVM_SOCKET_PATH` | Local | No | `/run/gvmd/gvmd.sock` |
-| `GVM_TLS_HOSTNAME` | TLS | Yes* | - |
-| `GVM_TLS_PORT` | TLS | No | `9390` |
-| `GVM_TLS_CERTFILE` | TLS | No | - |
-| `GVM_TLS_CAFILE` | TLS | No | - |
-| `GVM_TLS_KEYFILE` | TLS | No | - |
-| `GVM_TLS_KEY_PASSWORD` | TLS | No | - |
-| `GVM_SSH_HOSTNAME` | SSH | Yes* | - |
-| `GVM_SSH_PORT` | SSH | No | `22` |
-| `GVM_SSH_USERNAME` | SSH | No | `gmp` |
-| `GVM_SSH_PASSWORD` | SSH | No | - |
-| `GVM_SSH_KNOWN_HOSTS` | SSH | No | - |
-| `GVM_SSH_AUTO_ACCEPT_HOST` | SSH | No | `false` |
+| `GVM_HOSTNAME` | Remote | Yes* | - |
+| `GVM_PORT` | Remote | No | `9390` |
+| `GVM_CERTFILE` | Remote | No | - |
+| `GVM_CAFILE` | Remote | No | - |
+| `GVM_KEYFILE` | Remote | No | - |
+| `GVM_KEY_PASSWORD` | Remote | No | - |
 | `GVM_RETRY_MAX_ATTEMPTS` | All | No | `3` |
 | `GVM_RETRY_INITIAL_DELAY` | All | No | `1.0` |
 | `GVM_RETRY_MAX_DELAY` | All | No | `30.0` |
 | `GVM_IDLE_TIMEOUT` | All | No | `300` |
 
 *Required when using that style.
+
+---
+
+## Future: SSH Support
+
+SSH tunnel support (`remote_ssh`) is planned for a future release.

@@ -58,9 +58,8 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 
 ### 1.2 Client Layer
 - [ ] Abstract GvmClient base class
-- [ ] LocalSocketClient implementation (Unix socket)
-- [ ] RemoteTlsClient implementation (TLS)
-- [ ] RemoteSshClient implementation (SSH tunnel)
+- [ ] LocalClient implementation (Unix socket)
+- [ ] RemoteClient implementation (TLS)
 - [ ] Client factory for config-based instantiation
 - [ ] Connection management with retry (exponential backoff)
 - [ ] Auto-reconnect on failure + idle timeout
@@ -70,33 +69,22 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 
 **Connection Styles:**
 - [ ] `local` — Unix socket to local gvmd
-- [ ] `remote_tls` — TLS connection to remote gvmd
-- [ ] `remote_ssh` — SSH tunnel to remote gvmd
+- [ ] `remote` — TLS connection to remote gvmd
 
 **Local (Unix Socket) Parameters:**
 | Parameter | Type | Default |
 |-----------|------|---------|
 | `socket_path` | str | `/run/gvmd/gvmd.sock` |
 
-**Remote TLS Parameters:**
+**Remote (TLS) Parameters:**
 | Parameter | Type | Default |
 |-----------|------|---------|
-| `tls_hostname` | str | required |
-| `tls_port` | int | `9390` |
-| `tls_certfile` | str | optional (client cert) |
-| `tls_cafile` | str | optional (CA cert) |
-| `tls_keyfile` | str | optional (client key) |
-| `tls_key_password` | str | optional |
-
-**Remote SSH Parameters:**
-| Parameter | Type | Default |
-|-----------|------|---------|
-| `ssh_hostname` | str | required |
-| `ssh_port` | int | `22` |
-| `ssh_username` | str | `gmp` |
-| `ssh_password` | str | optional |
-| `ssh_known_hosts_file` | str | optional |
-| `ssh_auto_accept_host` | bool | `false` |
+| `hostname` | str | required |
+| `port` | int | `9390` |
+| `certfile` | str | optional (client cert) |
+| `cafile` | str | optional (CA cert) |
+| `keyfile` | str | optional (client key) |
+| `key_password` | str | optional |
 
 **Common Parameters (all styles):**
 | Parameter | Type | Default |
