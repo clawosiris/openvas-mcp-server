@@ -69,7 +69,7 @@ openvas-mcp-server/
 │       └── development.md
 │
 ├── src/
-│   └── openvas_mcp/
+│   └── src/
 │       ├── __init__.py
 │       │
 │       ├── infrastructure/
