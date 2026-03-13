@@ -1,0 +1,24 @@
+"""MCP tools for scan config management."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from src.services.scan_configs import ScanConfigService
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import FastMCP
+
+
+def register_scan_config_tools(server: FastMCP, service: ScanConfigService) -> None:
+    """Register scan config management tools."""
+
+    @server.tool(name="openvas_list_scan_configs")
+    def list_scan_configs(filter: str = "") -> dict[str, Any]:
+        result = service.list(filter)
+        return result.model_dump()
+
+    @server.tool(name="openvas_get_scan_config")
+    def get_scan_config(config_id: str) -> dict[str, Any]:
+        result = service.get(config_id)
+        return result.model_dump()

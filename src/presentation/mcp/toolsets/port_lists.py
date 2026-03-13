@@ -1,0 +1,24 @@
+"""MCP tools for port list management."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from src.services.port_lists import PortListService
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import FastMCP
+
+
+def register_port_list_tools(server: FastMCP, service: PortListService) -> None:
+    """Register port list management tools."""
+
+    @server.tool(name="openvas_list_port_lists")
+    def list_port_lists(filter: str = "") -> dict[str, Any]:
+        result = service.list(filter)
+        return result.model_dump()
+
+    @server.tool(name="openvas_get_port_list")
+    def get_port_list(port_list_id: str) -> dict[str, Any]:
+        result = service.get(port_list_id)
+        return result.model_dump()
