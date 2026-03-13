@@ -44,37 +44,138 @@ MCP server and CLI for Greenbone Vulnerability Management (GVM/OpenVAS).
 
 ---
 
-## Project Structure
+## Folder Structure
 
 ```
-openvas_mcp/
-├── infrastructure/
-│   ├── config.py           # Configuration
-│   └── client/
-│       ├── base.py         # Abstract GvmClient
-│       ├── local.py        # LocalClient (socket)
-│       └── remote.py       # RemoteClient (TLS)
+openvas-mcp-server/
 │
-├── services/
-│   ├── targets/
-│   │   ├── models.py       # Pydantic models
-│   │   └── service.py      # TargetService
-│   ├── scans/
-│   ├── reports/
-│   └── ...
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml              # Build, test, lint
+│   │   ├── release.yml         # Release pipeline
+│   │   └── docker.yml          # Docker build/push
+│   └── dependabot.yml          # Dependency updates
 │
-├── presentation/
-│   ├── mcp/
-│   │   ├── server.py       # MCP entry point
-│   │   └── toolsets/       # Tool registrations
-│   └── cli/
-│       ├── main.py         # CLI entry point
-│       └── commands/       # CLI commands
+├── docs/
+│   ├── ARCHITECTURE.md         # This document
+│   ├── phases/                 # Phase documents
+│   ├── cli/
+│   │   ├── installation.md
+│   │   ├── usage.md
+│   │   └── development.md
+│   └── mcp/
+│       ├── installation.md
+│       ├── usage.md
+│       └── development.md
 │
-├── errors.py               # Exception hierarchy
-└── utils/
-    ├── validators.py       # Input validation
-    └── xml_helpers.py      # XML parsing
+├── src/
+│   └── openvas_mcp/
+│       ├── __init__.py
+│       │
+│       ├── infrastructure/
+│       │   ├── __init__.py
+│       │   ├── config.py           # Configuration loading
+│       │   └── client/
+│       │       ├── __init__.py
+│       │       ├── base.py         # Abstract GvmClient
+│       │       ├── local.py        # LocalClient (Unix socket)
+│       │       ├── remote.py       # RemoteClient (TLS)
+│       │       └── factory.py      # Client factory
+│       │
+│       ├── services/
+│       │   ├── __init__.py
+│       │   ├── targets/
+│       │   │   ├── __init__.py
+│       │   │   ├── models.py       # Target, TargetCreateRequest, etc.
+│       │   │   └── service.py      # TargetService
+│       │   ├── tasks/
+│       │   │   ├── __init__.py
+│       │   │   ├── models.py
+│       │   │   └── service.py
+│       │   ├── reports/
+│       │   │   ├── __init__.py
+│       │   │   ├── models.py
+│       │   │   └── service.py
+│       │   ├── vulnerabilities/
+│       │   ├── notes/
+│       │   ├── overrides/
+│       │   ├── alerts/
+│       │   ├── credentials/
+│       │   ├── schedules/
+│       │   ├── policies/
+│       │   ├── audits/
+│       │   ├── tickets/
+│       │   ├── assets/
+│       │   ├── scan_configs/
+│       │   ├── filters/
+│       │   ├── tags/
+│       │   ├── users/
+│       │   ├── roles/
+│       │   ├── permissions/
+│       │   ├── groups/
+│       │   ├── port_lists/
+│       │   ├── scanners/
+│       │   ├── nvts/
+│       │   ├── secinfo/
+│       │   ├── feeds/
+│       │   └── system/
+│       │       ├── __init__.py
+│       │       ├── models.py
+│       │       └── service.py
+│       │
+│       ├── presentation/
+│       │   ├── __init__.py
+│       │   ├── mcp/
+│       │   │   ├── __init__.py
+│       │   │   ├── server.py       # MCP entry point
+│       │   │   └── toolsets/
+│       │   │       ├── __init__.py
+│       │   │       ├── targets.py
+│       │   │       ├── tasks.py
+│       │   │       ├── reports.py
+│       │   │       └── ...
+│       │   └── cli/
+│       │       ├── __init__.py
+│       │       ├── main.py         # CLI entry point
+│       │       ├── config.py       # CLI config handling
+│       │       └── commands/
+│       │           ├── __init__.py
+│       │           ├── configure.py
+│       │           ├── targets.py
+│       │           ├── tasks.py
+│       │           ├── reports.py
+│       │           └── ...
+│       │
+│       ├── errors.py               # Exception hierarchy
+│       │
+│       └── utils/
+│           ├── __init__.py
+│           ├── validators.py       # Input validation
+│           └── xml_helpers.py      # XML to model conversion
+│
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py                 # Shared fixtures
+│   ├── infrastructure/
+│   │   ├── __init__.py
+│   │   ├── test_config.py
+│   │   └── test_client.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── test_targets.py
+│   │   └── ...
+│   └── presentation/
+│       ├── __init__.py
+│       ├── mcp/
+│       └── cli/
+│
+├── Dockerfile                      # MCP server Docker image
+├── docker-compose.yml              # Dev environment
+├── pyproject.toml                  # Poetry config
+├── poetry.lock
+├── README.md
+├── LICENSE
+└── .gitignore
 ```
 
 ---
