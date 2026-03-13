@@ -2,92 +2,60 @@
 
 ## Overview
 
-The OpenVAS MCP server exposes GVM functionality as tools that AI agents can use.
+The OpenVAS MCP server exposes GVM functionality as MCP tools.
 
 ## Tool Reference
 
-*Tools will be added as services are implemented.*
+### System
 
-### Target Tools
+- `openvas_get_version`
+- `openvas_test_connection`
 
-| Tool | Description |
-|------|-------------|
-| `openvas_list_targets` | List all scan targets |
-| `openvas_get_target` | Get target details by ID |
-| `openvas_create_target` | Create a new scan target |
-| `openvas_delete_target` | Delete a target |
+### Targets
 
-### Scan Tools
+- `openvas_list_targets`
+- `openvas_get_target`
+- `openvas_create_target`
+- `openvas_delete_target`
 
-| Tool | Description |
-|------|-------------|
-| `openvas_list_tasks` | List all scan tasks |
-| `openvas_get_task` | Get task details |
-| `openvas_create_task` | Create a new scan task |
-| `openvas_start_task` | Start a scan |
-| `openvas_stop_task` | Stop a running scan |
+### Tasks (Scans)
 
-### Report Tools
+- `openvas_list_tasks`
+- `openvas_get_task`
+- `openvas_create_task`
+- `openvas_start_task`
+- `openvas_stop_task`
+- `openvas_resume_task`
+- `openvas_delete_task`
+- `openvas_clone_task`
 
-| Tool | Description |
-|------|-------------|
-| `openvas_list_reports` | List reports |
-| `openvas_get_report` | Get report details |
-| `openvas_get_report_summary` | Get report summary |
+### Reports
 
-### System Tools
+- `openvas_list_reports`
+- `openvas_get_report`
+- `openvas_get_report_detail`
+- `openvas_get_report_summary`
+- `openvas_export_report`
+- `openvas_delete_report`
 
-| Tool | Description |
-|------|-------------|
-| `openvas_get_version` | Get GVM version info |
-| `openvas_get_feeds` | Get feed status |
+### Utility Services
 
----
+- `openvas_list_scan_configs`
+- `openvas_get_scan_config`
+- `openvas_list_port_lists`
+- `openvas_get_port_list`
+- `openvas_list_schedules`
+- `openvas_get_schedule`
+
+### Vulnerabilities
+
+- `openvas_list_vulnerabilities`
+- `openvas_search_nvts`
 
 ## Example Prompts
 
-### List Targets
-
-> "Show me all scan targets in OpenVAS"
-
-### Create Target
-
-> "Create a new scan target called 'Web Servers' with hosts 192.168.1.10 and 192.168.1.11"
-
-### Run Scan
-
-> "Start a vulnerability scan on the Web Servers target"
-
-### Get Report
-
-> "Show me the summary of the latest scan report"
-
----
-
-## Error Handling
-
-All tools return structured errors:
-
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Target not found: abc-123",
-    "details": {
-      "resource_type": "target",
-      "resource_id": "abc-123"
-    }
-  }
-}
-```
-
-### Error Codes
-
-| Code | Description |
-|------|-------------|
-| `NOT_FOUND` | Resource does not exist |
-| `IN_USE` | Resource is in use |
-| `INVALID_UUID` | Invalid ID format |
-| `PERMISSION_DENIED` | Access denied |
-| `CONNECTION_TIMEOUT` | GVM connection timeout |
-| `GVM_INTERNAL` | GVM server error |
+- "Show me all scan targets in OpenVAS"
+- "Create a target named 'Web Servers' with hosts 192.168.1.10 and 192.168.1.11"
+- "Start task <uuid> and return the report id"
+- "Export report <uuid> as PDF"
+- "List vulnerabilities for report <uuid> with QoD >= 70"
