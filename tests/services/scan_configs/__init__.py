@@ -1,0 +1,1 @@
+"""Scan config service tests."""
