@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ssl
 from typing import TYPE_CHECKING
 
 from gvm.connections import TLSConnection
@@ -43,45 +42,12 @@ class RemoteClient(GvmClient):
         Returns:
             TLSConnection instance.
         """
-        ssl_context = self._create_ssl_context()
-
         return TLSConnection(
             hostname=self._config.hostname,
             port=self._config.port,
             timeout=self._config.timeout,
-            **({"ssl_context": ssl_context} if ssl_context else {}),
+            certfile=self._config.certfile,
+            cafile=self._config.cafile,
+            keyfile=self._config.keyfile,
+            password=self._config.key_password,
         )
-
-    def _create_ssl_context(self) -> ssl.SSLContext | None:
-        """Create SSL context for TLS connection.
-
-        Returns:
-            Configured SSLContext or None for default.
-        """
-        # Check if we need custom context
-        has_custom_config = any(
-            [
-                self._config.cafile,
-                self._config.certfile,
-                self._config.keyfile,
-            ]
-        )
-
-        if not has_custom_config:
-            return None
-
-        context = ssl.create_default_context()
-
-        # Load CA certificate
-        if self._config.cafile:
-            context.load_verify_locations(cafile=self._config.cafile)
-
-        # Load client certificate for mutual TLS
-        if self._config.certfile:
-            context.load_cert_chain(
-                certfile=self._config.certfile,
-                keyfile=self._config.keyfile,
-                password=self._config.key_password,
-            )
-
-        return context

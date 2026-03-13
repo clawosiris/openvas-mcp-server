@@ -11,6 +11,7 @@ import tomllib
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 
 class ConnectionStyle(str, Enum):
@@ -138,7 +139,7 @@ class ConfigLoader:
         Returns:
             GvmConfig instance with merged configuration.
         """
-        values: dict = {}
+        values: dict[str, Any] = {}
 
         # Try to load from file
         config_path = cls._find_config_file(path)
@@ -165,9 +166,9 @@ class ConfigLoader:
         return None
 
     @classmethod
-    def _load_env(cls) -> dict:
+    def _load_env(cls) -> dict[str, Any]:
         """Extract configuration from environment variables."""
-        values: dict = {}
+        values: dict[str, Any] = {}
 
         # Style
         style = os.getenv("GVM_STYLE")
@@ -207,12 +208,12 @@ class ConfigLoader:
         return values
 
     @classmethod
-    def _load_file(cls, path: str | Path) -> dict:
+    def _load_file(cls, path: str | Path) -> dict[str, Any]:
         """Load and flatten TOML config file."""
         with open(path, "rb") as f:
             data = tomllib.load(f)
 
-        values: dict = {}
+        values: dict[str, Any] = {}
 
         # [connection] section
         if conn := data.get("connection"):
@@ -242,6 +243,6 @@ class ConfigLoader:
         return values
 
     @classmethod
-    def _build_config(cls, values: dict) -> GvmConfig:
+    def _build_config(cls, values: dict[str, Any]) -> GvmConfig:
         """Build GvmConfig from dictionary of values."""
         return GvmConfig(**values)

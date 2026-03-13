@@ -56,7 +56,7 @@ class OpenvasMcpError(Exception):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        result = {"code": self.code, "message": self.message}
+        result: dict[str, Any] = {"code": self.code, "message": self.message}
         details = self.details.to_dict()
         if details:
             result["details"] = details

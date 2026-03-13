@@ -11,8 +11,9 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
+from gvm.connections import GvmConnection
 from gvm.errors import GvmError
 from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeCheckCommandTransform
@@ -70,12 +71,12 @@ class GvmClient(ABC):
             raise ValueError(f"Invalid configuration: {'; '.join(errors)}")
 
         self._config = config
-        self._gmp: Gmp | None = None
+        self._gmp: Gmp[Any] | None = None
         self._lock = threading.RLock()
         self._last_used: float = 0.0
 
     @abstractmethod
-    def _create_connection(self):
+    def _create_connection(self) -> GvmConnection:
         """Create the underlying GVM connection.
 
         Returns:
@@ -83,7 +84,7 @@ class GvmClient(ABC):
         """
         pass
 
-    def execute(self, operation: Callable[[Gmp], T], timeout: float | None = None) -> T:
+    def execute(self, operation: Callable[[Gmp[Any]], T], timeout: float | None = None) -> T:
         """Execute a GMP operation with retry.
 
         Args:
@@ -111,7 +112,7 @@ class GvmClient(ABC):
         finally:
             self._lock.release()
 
-    def _execute_with_retry(self, operation: Callable[[Gmp], T]) -> T:
+    def _execute_with_retry(self, operation: Callable[[Gmp[Any]], T]) -> T:
         """Execute with retry on error."""
         last_error: Exception | None = None
 
@@ -147,7 +148,7 @@ class GvmClient(ABC):
 
         # Create connection
         connection = self._create_connection()
-        transform = EtreeCheckCommandTransform()
+        transform = EtreeCheckCommandTransform()  # type: ignore[no-untyped-call]
 
         try:
             self._gmp = Gmp(connection=connection, transform=transform)
@@ -158,7 +159,7 @@ class GvmClient(ABC):
 
         # Authenticate
         try:
-            self._gmp.authenticate(
+            self._gmp.authenticate(  # type: ignore[attr-defined]
                 username=self._config.gmp_username,
                 password=self._config.gmp_password,
             )
