@@ -11,16 +11,16 @@ All errors provide:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
 class ErrorDetails:
     """Structured error details."""
 
-    resource_type: Optional[str] = None
-    resource_id: Optional[str] = None
-    field_name: Optional[str] = None
+    resource_type: str | None = None
+    resource_id: str | None = None
+    field_name: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -42,15 +42,15 @@ class OpenvasMcpError(Exception):
 
     def __init__(
         self,
-        message: Optional[str] = None,
-        details: Optional[ErrorDetails] = None,
+        message: str | None = None,
+        details: ErrorDetails | None = None,
     ):
         self.message = message or self.default_message
         self.details = details or ErrorDetails()
         super().__init__(self.message)
 
     @property
-    def cli_hint(self) -> Optional[str]:
+    def cli_hint(self) -> str | None:
         """Hint for CLI users. Override in subclasses."""
         return None
 
@@ -232,8 +232,8 @@ class ResourceNotFoundError(ResourceError):
     def __init__(
         self,
         resource_type: str,
-        resource_id: Optional[str] = None,
-        message: Optional[str] = None,
+        resource_id: str | None = None,
+        message: str | None = None,
     ):
         if message is None:
             if resource_id:

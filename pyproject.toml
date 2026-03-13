@@ -55,6 +55,7 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
+extend-safe-fixes = ["SIM105", "SIM102"]
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
@@ -73,6 +74,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["openvas_mcp"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG001", "ARG002", "F841"]
 
 # Mypy configuration
 [tool.mypy]

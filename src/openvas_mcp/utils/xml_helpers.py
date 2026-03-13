@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, TypeVar
 from xml.etree.ElementTree import Element
 
 T = TypeVar("T")
@@ -40,7 +41,7 @@ def attr(element: Element, name: str, default: str = "") -> str:
     return element.get(name, default)
 
 
-def child_attr(element: Element, path: str, name: str = "id") -> Optional[str]:
+def child_attr(element: Element, path: str, name: str = "id") -> str | None:
     """Get attribute from first matching child element.
 
     Args:
@@ -57,7 +58,7 @@ def child_attr(element: Element, path: str, name: str = "id") -> Optional[str]:
     return None
 
 
-def to_int(value: Optional[str], default: int = 0) -> int:
+def to_int(value: str | None, default: int = 0) -> int:
     """Convert string to integer with default.
 
     Args:
@@ -75,7 +76,7 @@ def to_int(value: Optional[str], default: int = 0) -> int:
         return default
 
 
-def to_float(value: Optional[str], default: float = 0.0) -> float:
+def to_float(value: str | None, default: float = 0.0) -> float:
     """Convert string to float with default.
 
     Args:
@@ -93,7 +94,7 @@ def to_float(value: Optional[str], default: float = 0.0) -> float:
         return default
 
 
-def to_bool(value: Optional[str], default: bool = False) -> bool:
+def to_bool(value: str | None, default: bool = False) -> bool:
     """Convert string to boolean.
 
     Args:
@@ -108,7 +109,7 @@ def to_bool(value: Optional[str], default: bool = False) -> bool:
     return value.lower() in ("1", "true", "yes")
 
 
-def to_datetime(value: Optional[str]) -> Optional[datetime]:
+def to_datetime(value: str | None) -> datetime | None:
     """Parse ISO datetime string.
 
     Args:

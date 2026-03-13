@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ssl
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from gvm.connections import TLSConnection
 
@@ -29,7 +29,7 @@ class RemoteClient(GvmClient):
         result = client.execute(lambda gmp: gmp.get_version())
     """
 
-    def __init__(self, config: "GvmConfig") -> None:
+    def __init__(self, config: GvmConfig) -> None:
         """Initialize remote client.
 
         Args:
@@ -52,7 +52,7 @@ class RemoteClient(GvmClient):
             **({"ssl_context": ssl_context} if ssl_context else {}),
         )
 
-    def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
+    def _create_ssl_context(self) -> ssl.SSLContext | None:
         """Create SSL context for TLS connection.
 
         Returns:

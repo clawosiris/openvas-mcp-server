@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from typing import Sequence
+from collections.abc import Sequence
 
 from openvas_mcp.errors import InvalidFilterError, InvalidHostError, InvalidUuidError
 

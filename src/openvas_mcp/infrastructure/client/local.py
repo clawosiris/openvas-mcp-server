@@ -26,7 +26,7 @@ class LocalClient(GvmClient):
         result = client.execute(lambda gmp: gmp.get_version())
     """
 
-    def __init__(self, config: "GvmConfig") -> None:
+    def __init__(self, config: GvmConfig) -> None:
         """Initialize local client.
 
         Args:

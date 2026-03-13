@@ -7,16 +7,10 @@ Environment variables take precedence over config file values.
 from __future__ import annotations
 
 import os
-import sys
-from dataclasses import dataclass, field
+import tomllib
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 
 class ConnectionStyle(str, Enum):
@@ -54,10 +48,10 @@ class GvmConfig:
     # Remote (TLS) settings
     hostname: str = "127.0.0.1"
     port: int = 9390
-    certfile: Optional[str] = None
-    cafile: Optional[str] = None
-    keyfile: Optional[str] = None
-    key_password: Optional[str] = None
+    certfile: str | None = None
+    cafile: str | None = None
+    keyfile: str | None = None
+    key_password: str | None = None
 
     # GMP Authentication
     gmp_username: str = ""
@@ -242,9 +236,8 @@ class ConfigLoader:
                 values["gmp_password"] = password
 
         # [retry] section
-        if retry := data.get("retry"):
-            if max_attempts := retry.get("max_attempts"):
-                values["retry_max_attempts"] = max_attempts
+        if (retry := data.get("retry")) and "max_attempts" in retry:
+            values["retry_max_attempts"] = retry["max_attempts"]
 
         return values
 

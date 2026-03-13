@@ -9,7 +9,9 @@ import logging
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar
+from collections.abc import Callable
+from contextlib import suppress
+from typing import TYPE_CHECKING, TypeVar
 
 from gvm.errors import GvmError
 from gvm.protocols.gmp import Gmp
@@ -54,7 +56,7 @@ class GvmClient(ABC):
         result = client.execute(lambda gmp: gmp.get_targets())
     """
 
-    def __init__(self, config: "GvmConfig") -> None:
+    def __init__(self, config: GvmConfig) -> None:
         """Initialize client.
 
         Args:
@@ -68,7 +70,7 @@ class GvmClient(ABC):
             raise ValueError(f"Invalid configuration: {'; '.join(errors)}")
 
         self._config = config
-        self._gmp: Optional[Gmp] = None
+        self._gmp: Gmp | None = None
         self._lock = threading.RLock()
         self._last_used: float = 0.0
 
@@ -81,7 +83,7 @@ class GvmClient(ABC):
         """
         pass
 
-    def execute(self, operation: Callable[[Gmp], T], timeout: Optional[float] = None) -> T:
+    def execute(self, operation: Callable[[Gmp], T], timeout: float | None = None) -> T:
         """Execute a GMP operation with retry.
 
         Args:
@@ -111,7 +113,7 @@ class GvmClient(ABC):
 
     def _execute_with_retry(self, operation: Callable[[Gmp], T]) -> T:
         """Execute with retry on error."""
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for attempt in range(self._config.retry_max_attempts):
             try:
@@ -139,10 +141,8 @@ class GvmClient(ABC):
         """Establish connection and authenticate."""
         # Disconnect existing if any
         if self._gmp is not None:
-            try:
+            with suppress(Exception):
                 self._gmp.disconnect()
-            except Exception:
-                pass
             self._gmp = None
 
         # Create connection
@@ -176,10 +176,8 @@ class GvmClient(ABC):
     def _disconnect(self) -> None:
         """Clean disconnect."""
         if self._gmp is not None:
-            try:
+            with suppress(Exception):
                 self._gmp.disconnect()
-            except Exception:
-                pass
             self._gmp = None
 
     def disconnect(self) -> None:
@@ -205,6 +203,6 @@ class GvmClient(ABC):
         return self._gmp is not None and self._gmp.is_connected()
 
     @property
-    def config(self) -> "GvmConfig":
+    def config(self) -> GvmConfig:
         """Get the client configuration."""
         return self._config

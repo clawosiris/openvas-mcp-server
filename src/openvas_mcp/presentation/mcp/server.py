@@ -19,8 +19,8 @@ def create_server() -> FastMCP:
     # Load configuration from environment
     config = ConfigLoader.from_env()
 
-    # Create client
-    client = create_client(config)
+    # Create client (kept for upcoming tool registration)
+    _client = create_client(config)
 
     # TODO: Register toolsets as services are implemented
     # register_target_tools(server, TargetService(client))
