@@ -59,14 +59,62 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 ### 1.2 Client Layer
 - [ ] Abstract GvmClient base class
 - [ ] LocalSocketClient implementation (Unix socket)
-- [ ] RemoteClient implementation (TLS)
+- [ ] RemoteTlsClient implementation (TLS)
+- [ ] RemoteSshClient implementation (SSH tunnel)
 - [ ] Client factory for config-based instantiation
 - [ ] Connection management with retry (exponential backoff)
 - [ ] Auto-reconnect on failure + idle timeout
 - [ ] RLock with timeout (no pooling)
-- [ ] Configuration handling (env vars for MCP, interactive for CLI)
 
-### 1.3 Error Handling (see docs/ERROR_HANDLING.md)
+### 1.3 Configuration (see docs/CONFIGURATION.md)
+
+**Connection Styles:**
+- [ ] `local` — Unix socket to local gvmd
+- [ ] `remote_tls` — TLS connection to remote gvmd
+- [ ] `remote_ssh` — SSH tunnel to remote gvmd
+
+**Local (Unix Socket) Parameters:**
+| Parameter | Type | Default |
+|-----------|------|---------|
+| `socket_path` | str | `/run/gvmd/gvmd.sock` |
+
+**Remote TLS Parameters:**
+| Parameter | Type | Default |
+|-----------|------|---------|
+| `tls_hostname` | str | required |
+| `tls_port` | int | `9390` |
+| `tls_certfile` | str | optional (client cert) |
+| `tls_cafile` | str | optional (CA cert) |
+| `tls_keyfile` | str | optional (client key) |
+| `tls_key_password` | str | optional |
+
+**Remote SSH Parameters:**
+| Parameter | Type | Default |
+|-----------|------|---------|
+| `ssh_hostname` | str | required |
+| `ssh_port` | int | `22` |
+| `ssh_username` | str | `gmp` |
+| `ssh_password` | str | optional |
+| `ssh_known_hosts_file` | str | optional |
+| `ssh_auto_accept_host` | bool | `false` |
+
+**Common Parameters (all styles):**
+| Parameter | Type | Default |
+|-----------|------|---------|
+| `gmp_username` | str | required |
+| `gmp_password` | str | required |
+| `timeout` | int | `60` |
+| `retry_max_attempts` | int | `3` |
+| `retry_initial_delay` | float | `1.0` |
+| `retry_max_delay` | float | `30.0` |
+| `idle_timeout` | int | `300` |
+
+**Configuration Sources:**
+- [ ] Environment variables (for MCP installation)
+- [ ] TOML config file (for CLI persistence)
+- [ ] Interactive prompt (CLI first-run)
+
+### 1.4 Error Handling (see docs/ERROR_HANDLING.md)
 - [ ] Custom exception hierarchy (22 error types)
   - ConfigurationError, ConnectionError, AuthenticationError
   - ValidationError, ResourceError, OperationError, ServerError
@@ -75,7 +123,7 @@ This project provides an MCP (Model Context Protocol) server for OpenVAS/Greenbo
 - [ ] GMP status code → custom error mapping
 - [ ] `translate_gvm_error()` helper function
 
-### 1.4 Core DTOs/Models
+### 1.5 Core DTOs/Models
 - [ ] Define domain models (Target, Scan, Report, etc.)
 - [ ] Pydantic models for requests/responses
 - [ ] XML → Model mapping utilities
