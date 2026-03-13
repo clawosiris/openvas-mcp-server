@@ -5,9 +5,11 @@ from mcp.server.fastmcp import FastMCP
 from src.infrastructure import ConfigLoader, create_client
 from src.services.system import SystemService
 from src.services.targets import TargetService
+from src.services.tasks import TaskService
 
 from .toolsets.system import register_system_tools
 from .toolsets.targets import register_target_tools
+from .toolsets.tasks import register_task_tools
 
 
 def create_server() -> FastMCP:
@@ -30,6 +32,7 @@ def create_server() -> FastMCP:
     # Register toolsets
     register_system_tools(server, SystemService(client))
     register_target_tools(server, TargetService(client))
+    register_task_tools(server, TaskService(client))
 
     return server
 
