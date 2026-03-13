@@ -18,427 +18,732 @@ openvas_mcp/
 ├── __init__.py
 ├── infrastructure/
 │   ├── __init__.py
-│   ├── config.py              # Configuration loading (env/file)
-│   └── client.py              # Singleton GMP client with session mgmt
+│   ├── config.py              # Configuration models
+│   ├── client/
+│   │   ├── __init__.py
+│   │   ├── base.py            # Abstract GvmClient
+│   │   ├── socket_client.py   # LocalSocketClient implementation
+│   │   └── remote_client.py   # RemoteClient (TLS) implementation
+│   └── factory.py             # Client factory
 │
 ├── services/
 │   ├── __init__.py
 │   ├── targets/
 │   │   ├── __init__.py
-│   │   ├── models.py          # Target, TargetCreateRequest, TargetResponse
-│   │   └── service.py         # TargetService implementation
+│   │   ├── models.py
+│   │   └── service.py
 │   ├── scans/
 │   │   ├── __init__.py
 │   │   ├── models.py
 │   │   └── service.py
-│   ├── reports/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── vulnerabilities/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── assets/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── compliance/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── tickets/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── notes/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── overrides/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── secinfo/
-│   │   ├── __init__.py
-│   │   ├── models.py          # NVT, CVE, CPE, Advisory
-│   │   └── service.py
-│   ├── credentials/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   ├── schedules/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── service.py
-│   └── system/
-│       ├── __init__.py
-│       ├── models.py          # Version, Feed status
-│       └── service.py
+│   └── ... (other domain services)
 │
 ├── presentation/
 │   ├── __init__.py
 │   ├── mcp/
 │   │   ├── __init__.py
-│   │   ├── server.py          # FastMCP server entry point
+│   │   ├── server.py          # MCP server entry point
+│   │   ├── config.py          # MCP-specific config (from params)
 │   │   └── toolsets/
-│   │       ├── __init__.py
-│   │       ├── targets.py     # Target tools (list, create, modify, delete)
-│   │       ├── scans.py
-│   │       ├── reports.py
-│   │       ├── vulnerabilities.py
-│   │       ├── assets.py
-│   │       ├── compliance.py
-│   │       ├── tickets.py
-│   │       ├── notes.py
-│   │       ├── overrides.py
-│   │       └── system.py
-│   │
+│   │       └── ...
 │   └── cli/
 │       ├── __init__.py
-│       ├── main.py            # CLI entry point (typer)
+│       ├── main.py            # CLI entry point
+│       ├── config.py          # CLI config (interactive prompt)
 │       └── commands/
-│           ├── __init__.py
-│           ├── targets.py
-│           ├── scans.py
-│           ├── reports.py
-│           ├── vulnerabilities.py
-│           ├── assets.py
-│           ├── compliance.py
-│           ├── tickets.py
-│           └── system.py
+│           └── ...
 │
-├── errors.py                  # Custom exception hierarchy
+├── errors.py
 └── utils/
-    ├── __init__.py
-    ├── xml_helpers.py         # XML to model conversion
-    └── validators.py          # Input validation helpers
-
-tests/
-├── __init__.py
-├── infrastructure/
-│   ├── test_config.py         # Full coverage
-│   └── test_client.py         # Full coverage
-├── services/
-│   ├── targets/
-│   │   └── test_service.py    # Edge cases only
-│   ├── scans/
-│   │   └── test_service.py
-│   └── ...
-├── presentation/
-│   ├── mcp/
-│   │   └── test_toolsets.py   # Edge cases only
-│   └── cli/
-│       └── test_commands.py
-└── conftest.py                # Shared fixtures
+    └── ...
 ```
 
 ---
 
-## Layer Responsibilities
+## Client Abstraction
 
-### Infrastructure Layer
+### Class Hierarchy
 
-**Location:** `openvas_mcp/infrastructure/`
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    GvmClient (Abstract)                     │
+│  ─────────────────────────────────────────────────────────  │
+│  + execute(operation) -> T                                  │
+│  + disconnect() -> None                                     │
+│  + is_connected() -> bool                                   │
+│  # _connect() -> None (abstract)                            │
+│  # _create_connection() -> GvmConnection (abstract)         │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          │                               │
+          ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│  LocalSocketClient  │       │    RemoteClient     │
+│  ─────────────────  │       │  ─────────────────  │
+│  Unix socket conn   │       │  TLS connection     │
+│  No SSL context     │       │  Certificate mgmt   │
+│  Local gvmd only    │       │  Remote gvmd        │
+└─────────────────────┘       └─────────────────────┘
+```
 
-| Component | Responsibility |
-|-----------|----------------|
-| `config.py` | Load configuration from env vars or TOML file |
-| `client.py` | Singleton GMP client with persistent session |
-
-#### Client Design (Singleton with Session Persistence)
+### Abstract Base Client
 
 ```python
-class GvmClient:
-    """Thread-safe singleton GMP client with persistent authentication."""
+# infrastructure/client/base.py
+from abc import ABC, abstractmethod
+from typing import Callable, TypeVar, Optional
+import threading
+import time
+
+from gvm.protocols.gmp import Gmp
+
+T = TypeVar("T")
+
+class GvmClient(ABC):
+    """Abstract base client for GVM connections.
     
-    _instance: Optional["GvmClient"] = None
-    _lock: threading.Lock = threading.Lock()
+    Provides:
+    - Thread-safe operation execution
+    - Automatic reconnection on failure
+    - Exponential backoff retry
+    - Idle connection cleanup
+    """
     
-    def __new__(cls, config: GvmConfig) -> "GvmClient":
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialize(config)
-        return cls._instance
+    def __init__(self, config: "BaseClientConfig"):
+        self._config = config
+        self._gmp: Optional[Gmp] = None
+        self._lock = threading.RLock()
+        self._last_used: float = 0.0
     
-    def execute(self, operation: Callable[[Gmp], T]) -> T:
-        """Execute a GMP operation with automatic reconnection."""
-        with self._operation_lock:
+    @abstractmethod
+    def _create_connection(self):
+        """Create the underlying GVM connection. Implementation-specific."""
+        pass
+    
+    @abstractmethod
+    def _get_credentials(self) -> tuple[str, str]:
+        """Return (username, password) for authentication."""
+        pass
+    
+    def execute(self, operation: Callable[[Gmp], T], timeout: Optional[float] = None) -> T:
+        """Execute operation with retry and auto-reconnect."""
+        timeout = timeout or self._config.operation_timeout
+        
+        acquired = self._lock.acquire(timeout=timeout)
+        if not acquired:
+            raise ConnectionTimeoutError(
+                "Timeout waiting for GVM connection. Another operation is in progress."
+            )
+        
+        try:
+            return self._execute_with_retry(operation)
+        finally:
+            self._lock.release()
+    
+    def _execute_with_retry(self, operation: Callable[[Gmp], T]) -> T:
+        """Execute with exponential backoff retry."""
+        last_error = None
+        
+        for attempt in range(self._config.retry_max_attempts):
             try:
-                gmp = self._ensure_connected()
-                return operation(gmp)
-            except (ConnectionError, GvmError):
-                self._connect()
-                return operation(self._gmp)
+                self._ensure_connected()
+                result = operation(self._gmp)
+                self._last_used = time.time()
+                return result
+            except GvmError as e:
+                last_error = e
+                if not self._is_retryable(e):
+                    raise
+                if attempt < self._config.retry_max_attempts - 1:
+                    delay = self._calculate_delay(attempt)
+                    time.sleep(delay)
+                    self._reconnect()
+        
+        raise last_error
+    
+    def _ensure_connected(self):
+        """Ensure connection is alive, reconnect if needed."""
+        now = time.time()
+        
+        # Close stale connections
+        if self._gmp and (now - self._last_used) > self._config.idle_timeout:
+            self._disconnect()
+        
+        # Connect if needed
+        if self._gmp is None or not self._gmp.is_connected():
+            self._connect()
+    
+    def _connect(self):
+        """Establish connection and authenticate."""
+        connection = self._create_connection()
+        self._gmp = Gmp(connection=connection, transform=EtreeCheckCommandTransform())
+        self._gmp.connect()
+        
+        username, password = self._get_credentials()
+        self._gmp.authenticate(username=username, password=password)
+    
+    def _reconnect(self):
+        """Force reconnection."""
+        self._disconnect()
+        self._connect()
+    
+    def _disconnect(self):
+        """Clean disconnect."""
+        if self._gmp:
+            try:
+                self._gmp.disconnect()
+            except Exception:
+                pass
+            self._gmp = None
+    
+    def disconnect(self):
+        """Public disconnect method."""
+        with self._lock:
+            self._disconnect()
+    
+    @property
+    def is_connected(self) -> bool:
+        return self._gmp is not None and self._gmp.is_connected()
 ```
 
-**⚠️ Session Management Notes:**
+### Local Socket Client
 
-1. **Session persistence confirmed:** python-gvm supports keeping authenticated sessions alive.
-2. **Server-side timeout:** gvmd may close idle connections. Client auto-reconnects.
-3. **Thread safety:** Operations serialized via `_operation_lock`.
+```python
+# infrastructure/client/socket_client.py
+from gvm.connections import UnixSocketConnection
+from .base import GvmClient
+
+class LocalSocketClient(GvmClient):
+    """Client for local Unix socket connections.
+    
+    Usage:
+        config = SocketClientConfig(
+            socket_path="/run/gvmd/gvmd.sock",
+            username="admin",
+            password="secret"
+        )
+        client = LocalSocketClient(config)
+    """
+    
+    def __init__(self, config: "SocketClientConfig"):
+        super().__init__(config)
+        self._socket_config = config
+    
+    def _create_connection(self):
+        return UnixSocketConnection(
+            path=self._socket_config.socket_path,
+            timeout=self._socket_config.connection_timeout,
+        )
+    
+    def _get_credentials(self) -> tuple[str, str]:
+        return (
+            self._socket_config.username,
+            self._socket_config.password,
+        )
+```
+
+### Remote Client (TLS)
+
+```python
+# infrastructure/client/remote_client.py
+import ssl
+from gvm.connections import TLSConnection
+from .base import GvmClient
+
+class RemoteClient(GvmClient):
+    """Client for remote TLS connections.
+    
+    Usage:
+        config = RemoteClientConfig(
+            host="gvm.example.com",
+            port=9390,
+            username="admin",
+            password="secret",
+            ca_cert="/path/to/ca.pem",  # optional
+            verify_ssl=True
+        )
+        client = RemoteClient(config)
+    """
+    
+    def __init__(self, config: "RemoteClientConfig"):
+        super().__init__(config)
+        self._remote_config = config
+    
+    def _create_connection(self):
+        ssl_context = self._create_ssl_context()
+        return TLSConnection(
+            hostname=self._remote_config.host,
+            port=self._remote_config.port,
+            timeout=self._remote_config.connection_timeout,
+            ssl_context=ssl_context,
+        )
+    
+    def _create_ssl_context(self) -> ssl.SSLContext:
+        if not self._remote_config.verify_ssl:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            return context
+        
+        context = ssl.create_default_context()
+        
+        if self._remote_config.ca_cert:
+            context.load_verify_locations(cafile=self._remote_config.ca_cert)
+        
+        if self._remote_config.client_cert:
+            context.load_cert_chain(
+                certfile=self._remote_config.client_cert,
+                keyfile=self._remote_config.client_key,
+            )
+        
+        return context
+    
+    def _get_credentials(self) -> tuple[str, str]:
+        return (
+            self._remote_config.username,
+            self._remote_config.password,
+        )
+```
 
 ---
 
-### Service Layer
-
-**Location:** `openvas_mcp/services/<domain>/`
-
-Each domain has:
-- `models.py` — Pydantic models for requests, responses, and entities
-- `service.py` — Business logic implementation
-
-#### Model Design Pattern
+## Configuration Models
 
 ```python
-# services/targets/models.py
-from pydantic import BaseModel, Field
+# infrastructure/config.py
+from dataclasses import dataclass
+from typing import Optional, Literal
 
-class Target(BaseModel):
-    """Target entity (domain model)."""
-    id: str
-    name: str
-    hosts: list[str]
-    exclude_hosts: list[str] = []
-    comment: Optional[str] = None
-    alive_test: Optional[str] = None
-    port_list_id: Optional[str] = None
-    in_use: bool = False
+@dataclass
+class BaseClientConfig:
+    """Base configuration for all clients."""
+    username: str
+    password: str
+    
+    # Timeouts (seconds)
+    connection_timeout: int = 30
+    operation_timeout: int = 300
+    idle_timeout: int = 300
+    
+    # Retry settings
+    retry_max_attempts: int = 3
+    retry_initial_delay: float = 1.0
+    retry_max_delay: float = 30.0
 
-class TargetCreateRequest(BaseModel):
-    """Request to create a target."""
-    name: str = Field(..., min_length=1, max_length=255)
-    hosts: list[str] = Field(..., min_length=1)
-    exclude_hosts: list[str] = []
-    comment: Optional[str] = Field(None, max_length=500)
 
-class TargetListResponse(BaseModel):
-    """Response containing list of targets."""
-    items: list[Target]
-    count: int
+@dataclass
+class SocketClientConfig(BaseClientConfig):
+    """Configuration for local socket client."""
+    socket_path: str = "/run/gvmd/gvmd.sock"
+
+
+@dataclass  
+class RemoteClientConfig(BaseClientConfig):
+    """Configuration for remote TLS client."""
+    host: str
+    port: int = 9390
+    
+    # TLS settings
+    verify_ssl: bool = True
+    ca_cert: Optional[str] = None
+    client_cert: Optional[str] = None
+    client_key: Optional[str] = None
+
+
+@dataclass
+class GvmTargetConfig:
+    """User-facing configuration for GVM target."""
+    connection_type: Literal["socket", "tls"]
+    
+    # Socket settings
+    socket_path: Optional[str] = None
+    
+    # TLS settings
+    host: Optional[str] = None
+    port: int = 9390
+    verify_ssl: bool = True
+    ca_cert: Optional[str] = None
+    client_cert: Optional[str] = None
+    client_key: Optional[str] = None
+    
+    # Auth
+    username: str = ""
+    password: str = ""
+    
+    # Timeouts
+    timeout: int = 300
 ```
 
-#### Service Design Pattern
+### Client Factory
+
+```python
+# infrastructure/factory.py
+from .config import GvmTargetConfig, SocketClientConfig, RemoteClientConfig
+from .client.base import GvmClient
+from .client.socket_client import LocalSocketClient
+from .client.remote_client import RemoteClient
+
+def create_client(config: GvmTargetConfig) -> GvmClient:
+    """Factory function to create appropriate client from config."""
+    
+    if config.connection_type == "socket":
+        socket_config = SocketClientConfig(
+            socket_path=config.socket_path or "/run/gvmd/gvmd.sock",
+            username=config.username,
+            password=config.password,
+            operation_timeout=config.timeout,
+        )
+        return LocalSocketClient(socket_config)
+    
+    elif config.connection_type == "tls":
+        if not config.host:
+            raise ValueError("host is required for TLS connection")
+        
+        remote_config = RemoteClientConfig(
+            host=config.host,
+            port=config.port,
+            username=config.username,
+            password=config.password,
+            verify_ssl=config.verify_ssl,
+            ca_cert=config.ca_cert,
+            client_cert=config.client_cert,
+            client_key=config.client_key,
+            operation_timeout=config.timeout,
+        )
+        return RemoteClient(remote_config)
+    
+    else:
+        raise ValueError(f"Unknown connection type: {config.connection_type}")
+```
+
+---
+
+## MCP Configuration (Installation Parameters)
+
+```python
+# presentation/mcp/config.py
+"""
+MCP server receives configuration as installation parameters.
+
+Example MCP client config (Claude Desktop):
+{
+  "mcpServers": {
+    "openvas": {
+      "command": "openvas-mcp",
+      "args": [],
+      "env": {
+        "GVM_CONNECTION_TYPE": "socket",
+        "GVM_SOCKET_PATH": "/run/gvmd/gvmd.sock",
+        "GVM_USERNAME": "admin",
+        "GVM_PASSWORD": "secret"
+      }
+    }
+  }
+}
+
+Or for remote:
+{
+  "mcpServers": {
+    "openvas": {
+      "command": "openvas-mcp",
+      "env": {
+        "GVM_CONNECTION_TYPE": "tls",
+        "GVM_HOST": "gvm.example.com",
+        "GVM_PORT": "9390",
+        "GVM_USERNAME": "admin",
+        "GVM_PASSWORD": "secret",
+        "GVM_VERIFY_SSL": "true"
+      }
+    }
+  }
+}
+"""
+
+import os
+from ..infrastructure.config import GvmTargetConfig
+
+def load_mcp_config() -> GvmTargetConfig:
+    """Load configuration from environment variables (MCP installation params)."""
+    
+    connection_type = os.environ.get("GVM_CONNECTION_TYPE", "socket")
+    
+    return GvmTargetConfig(
+        connection_type=connection_type,
+        
+        # Socket
+        socket_path=os.environ.get("GVM_SOCKET_PATH"),
+        
+        # TLS
+        host=os.environ.get("GVM_HOST"),
+        port=int(os.environ.get("GVM_PORT", "9390")),
+        verify_ssl=os.environ.get("GVM_VERIFY_SSL", "true").lower() == "true",
+        ca_cert=os.environ.get("GVM_CA_CERT"),
+        client_cert=os.environ.get("GVM_CLIENT_CERT"),
+        client_key=os.environ.get("GVM_CLIENT_KEY"),
+        
+        # Auth
+        username=os.environ.get("GVM_USERNAME", ""),
+        password=os.environ.get("GVM_PASSWORD", ""),
+        
+        # Timeout
+        timeout=int(os.environ.get("GVM_TIMEOUT", "300")),
+    )
+```
+
+---
+
+## CLI Configuration (Interactive Prompt)
+
+```python
+# presentation/cli/config.py
+"""
+CLI prompts user for connection details on initialization.
+Configuration is saved to ~/.config/openvas-mcp/config.toml
+"""
+
+import os
+from pathlib import Path
+from typing import Optional
+import typer
+from rich.console import Console
+from rich.prompt import Prompt, Confirm
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+import tomli_w
+
+from ..infrastructure.config import GvmTargetConfig
+
+CONFIG_DIR = Path.home() / ".config" / "openvas-mcp"
+CONFIG_FILE = CONFIG_DIR / "config.toml"
+
+console = Console()
+
+
+def load_cli_config() -> Optional[GvmTargetConfig]:
+    """Load existing CLI configuration if available."""
+    if not CONFIG_FILE.exists():
+        return None
+    
+    with open(CONFIG_FILE, "rb") as f:
+        data = tomllib.load(f)
+    
+    return GvmTargetConfig(
+        connection_type=data.get("connection_type", "socket"),
+        socket_path=data.get("socket_path"),
+        host=data.get("host"),
+        port=data.get("port", 9390),
+        verify_ssl=data.get("verify_ssl", True),
+        ca_cert=data.get("ca_cert"),
+        client_cert=data.get("client_cert"),
+        client_key=data.get("client_key"),
+        username=data.get("username", ""),
+        password=data.get("password", ""),
+        timeout=data.get("timeout", 300),
+    )
+
+
+def save_cli_config(config: GvmTargetConfig) -> None:
+    """Save CLI configuration to file."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    
+    data = {
+        "connection_type": config.connection_type,
+        "socket_path": config.socket_path,
+        "host": config.host,
+        "port": config.port,
+        "verify_ssl": config.verify_ssl,
+        "ca_cert": config.ca_cert,
+        "client_cert": config.client_cert,
+        "client_key": config.client_key,
+        "username": config.username,
+        # Note: password not saved for security
+        "timeout": config.timeout,
+    }
+    
+    # Remove None values
+    data = {k: v for k, v in data.items() if v is not None}
+    
+    with open(CONFIG_FILE, "wb") as f:
+        tomli_w.dump(data, f)
+    
+    console.print(f"[green]Configuration saved to {CONFIG_FILE}[/green]")
+
+
+def prompt_for_config() -> GvmTargetConfig:
+    """Interactive prompt for GVM connection configuration."""
+    
+    console.print("\n[bold]OpenVAS MCP - Connection Setup[/bold]\n")
+    
+    # Connection type
+    connection_type = Prompt.ask(
+        "Connection type",
+        choices=["socket", "tls"],
+        default="socket"
+    )
+    
+    config_data = {"connection_type": connection_type}
+    
+    if connection_type == "socket":
+        config_data["socket_path"] = Prompt.ask(
+            "Socket path",
+            default="/run/gvmd/gvmd.sock"
+        )
+    else:
+        config_data["host"] = Prompt.ask("GVM hostname")
+        config_data["port"] = int(Prompt.ask("GVM port", default="9390"))
+        config_data["verify_ssl"] = Confirm.ask("Verify SSL certificate?", default=True)
+        
+        if config_data["verify_ssl"]:
+            ca_cert = Prompt.ask("CA certificate path (optional)", default="")
+            if ca_cert:
+                config_data["ca_cert"] = ca_cert
+    
+    # Authentication
+    config_data["username"] = Prompt.ask("GVM username", default="admin")
+    config_data["password"] = Prompt.ask("GVM password", password=True)
+    
+    # Timeout
+    config_data["timeout"] = int(Prompt.ask("Operation timeout (seconds)", default="300"))
+    
+    return GvmTargetConfig(**config_data)
+
+
+def get_or_prompt_config(force_prompt: bool = False) -> GvmTargetConfig:
+    """Get config from file or prompt user."""
+    
+    existing = load_cli_config()
+    
+    if existing and not force_prompt:
+        # Have existing config, just need password
+        console.print(f"[dim]Using saved config: {existing.connection_type} connection[/dim]")
+        
+        password = Prompt.ask(
+            f"Password for {existing.username}",
+            password=True
+        )
+        existing.password = password
+        return existing
+    
+    # No config or forced prompt
+    config = prompt_for_config()
+    
+    if Confirm.ask("Save this configuration?", default=True):
+        save_cli_config(config)
+    
+    return config
+```
+
+### CLI Main Entry Point
+
+```python
+# presentation/cli/main.py
+import typer
+from rich.console import Console
+
+from .config import get_or_prompt_config
+from ..infrastructure.factory import create_client
+
+app = typer.Typer(
+    name="openvas",
+    help="OpenVAS/GVM command-line interface"
+)
+console = Console()
+
+# Global client (initialized on first command)
+_client = None
+
+
+def get_client():
+    """Get or initialize the GVM client."""
+    global _client
+    
+    if _client is None:
+        config = get_or_prompt_config()
+        _client = create_client(config)
+    
+    return _client
+
+
+@app.command()
+def configure(force: bool = typer.Option(False, "--force", "-f", help="Force reconfiguration")):
+    """Configure GVM connection."""
+    config = get_or_prompt_config(force_prompt=True)
+    console.print("[green]Configuration complete![/green]")
+
+
+@app.command()
+def test():
+    """Test GVM connection."""
+    client = get_client()
+    
+    try:
+        result = client.execute(lambda gmp: gmp.get_version())
+        console.print(f"[green]✓ Connected to GVM version: {result}[/green]")
+    except Exception as e:
+        console.print(f"[red]✗ Connection failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
+# Import command groups
+from .commands import targets, scans, reports
+
+app.add_typer(targets.app, name="target")
+app.add_typer(scans.app, name="scan")
+app.add_typer(reports.app, name="report")
+
+
+def main():
+    app()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## Service Layer
+
+Services receive client via dependency injection:
 
 ```python
 # services/targets/service.py
+from ...infrastructure.client.base import GvmClient
+
 class TargetService:
-    """Service for target management operations."""
-    
     def __init__(self, client: GvmClient):
         self._client = client
     
     def list(self, filter_string: str = "rows=-1") -> TargetListResponse:
-        """List all targets matching filter."""
         def _operation(gmp):
             response = gmp.get_targets(filter_string=filter_string)
-            targets = [parse_target(t) for t in response.findall("target")]
-            return TargetListResponse(items=targets, count=len(targets))
-        return self._client.execute(_operation)
-    
-    def create(self, request: TargetCreateRequest) -> Target:
-        """Create a new target."""
-        def _operation(gmp):
-            response = gmp.create_target(
-                name=request.name,
-                hosts=request.hosts,
-                ...
-            )
-            return parse_target(...)
+            ...
         return self._client.execute(_operation)
 ```
 
 ---
 
-### Presentation Layer
+## Summary
 
-**Location:** `openvas_mcp/presentation/`
+| Component | Configuration Source |
+|-----------|---------------------|
+| **MCP Server** | Environment variables (set during installation) |
+| **CLI** | Interactive prompt → saved to `~/.config/openvas-mcp/config.toml` |
+| **Client** | Factory creates `LocalSocketClient` or `RemoteClient` based on config |
 
-#### MCP Toolsets
+| Client Type | Use Case |
+|-------------|----------|
+| `LocalSocketClient` | gvmd on same machine, Unix socket |
+| `RemoteClient` | gvmd on remote server, TLS connection |
 
-```python
-# presentation/mcp/toolsets/targets.py
-def register_target_tools(server: FastMCP, service: TargetService) -> None:
-    @server.tool()
-    def list_targets(filter_string: str = "rows=-1") -> dict:
-        """List all scan targets."""
-        response = service.list(filter_string)
-        return response.model_dump()
-    
-    @server.tool()
-    def create_target(name: str, hosts: list[str], ...) -> dict:
-        """Create a new scan target."""
-        request = TargetCreateRequest(name=name, hosts=hosts, ...)
-        target = service.create(request)
-        return target.model_dump()
-```
-
-#### CLI Commands
-
-```python
-# presentation/cli/commands/targets.py
-app = typer.Typer(help="Target management commands")
-
-@app.command("list")
-def list_targets(
-    filter: str = typer.Option("rows=-1", "--filter", "-f"),
-    json_output: bool = typer.Option(False, "--json"),
-):
-    """List all scan targets."""
-    service = _get_service()
-    response = service.list(filter)
-    
-    if json_output:
-        console.print_json(response.model_dump_json())
-    else:
-        table = Table(title="Targets")
-        ...
-```
-
----
-
-## Domain Services
-
-| Service | Entity | Operations |
-|---------|--------|------------|
-| `TargetService` | Target | list, get, create, update, delete |
-| `ScanService` | Scan/Task | list, get, create, start, stop, resume, delete |
-| `ReportService` | Report | list, get, get_summary, delete, export |
-| `VulnerabilityService` | Vulnerability | list, get, search_nvts |
-| `AssetService` | Host, OS, TLS | list_hosts, list_os, list_certificates |
-| `ComplianceService` | Policy, Audit | list_policies, list_audits, start, stop, check |
-| `TicketService` | Ticket | list, get, create, update, delete |
-| `NoteService` | Note | list, get, create, update, delete |
-| `OverrideService` | Override | list, get, create, update, delete |
-| `SecInfoService` | NVT, CVE, CPE | list_nvts, list_cves, list_cpes, get |
-| `CredentialService` | Credential | list, get, create, delete |
-| `ScheduleService` | Schedule | list, get, create, update, delete |
-| `SystemService` | Version, Feed | get_version, get_feeds, describe_auth |
-
----
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Connection
-GVM_CONNECTION_TYPE=tls          # tls | socket
-GVM_HOST=gvm.example.com         # Required for TLS
-GVM_PORT=9390                    # Default: 9390
-GVM_SOCKET_PATH=/run/gvmd.sock   # Required for socket
-
-# Authentication
-GVM_USERNAME=admin
-GVM_PASSWORD=secret
-
-# TLS (optional)
-GVM_CA_CERT=/path/to/ca.pem
-GVM_CLIENT_CERT=/path/to/client.pem
-GVM_CLIENT_KEY=/path/to/client.key
-GVM_VERIFY_SSL=true
-
-# Limits
-GVM_TIMEOUT=300
-GVM_MAX_RESULTS=10000
-```
-
-### Config File (Optional)
-
-```toml
-# /etc/openvas-mcp/config.toml
-[connection]
-type = "tls"
-host = "gvm.example.com"
-port = 9390
-
-[auth]
-username = "admin"
-# password via env var GVM_PASSWORD
-
-[tls]
-ca_cert = "/etc/openvas-mcp/ca.pem"
-verify = true
-
-[limits]
-timeout = 300
-max_results = 10000
-```
-
----
-
-## Versioning
-
-**CalVer Format:** `YYYY.0M.MICRO`
-
-Examples:
-- `2025.03.0` — Initial March 2025 release
-- `2025.03.1` — Patch release
-- `2025.04.0` — April 2025 release
-
----
-
-## Distribution
-
-### MCP Server (Docker)
-
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY pyproject.toml poetry.lock ./
-RUN pip install poetry && poetry install --only main
-COPY openvas_mcp ./openvas_mcp
-ENTRYPOINT ["poetry", "run", "python", "-m", "openvas_mcp.presentation.mcp.server"]
-```
-
-**Registry:** GitHub Container Registry (ghcr.io)
-
-### CLI (Python Package)
-
-```bash
-# Installation
-pip install openvas-mcp
-
-# Usage
-openvas target list
-openvas scan create --name "Scan" --target-id <id>
-openvas report get <id> --format json
-```
-
-**Distribution:** GitHub Releases → PyPI (later)
-
----
-
-## Testing Strategy
-
-### Full Coverage
-
-- `tests/infrastructure/test_config.py` — All config scenarios
-- `tests/infrastructure/test_client.py` — Connection, auth, reconnect, thread safety
-
-### Edge Cases Only
-
-For services and presentation layers:
-- Invalid inputs (malformed UUIDs, empty lists)
-- Error handling (GVM errors, connection failures)
-- Boundary conditions (max results, timeouts)
-- Concurrent access scenarios
-
-**Not tested:**
-- Happy path with valid parameters (covered by integration tests)
-- Simple parameter validation (covered by Pydantic)
-
----
-
-## Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `python-gvm` | ≥24.0 | Official GMP library (locked) |
-| `mcp[cli]` | ≥1.0 | MCP SDK with CLI tools |
-| `pydantic` | ≥2.0 | Models & validation |
-| `typer` | ≥0.9.0 | CLI framework |
-| `rich` | ≥13.0 | CLI formatting |
-| `tomli` | ≥2.0 | Config file parsing |
+| Concern | Solution |
+|---------|----------|
+| Thread safety | `RLock` with timeout |
+| Connection pooling | **Removed** — dangerous, gvmd is single-threaded |
+| Retry | Exponential backoff (3 attempts) |
+| Reconnect | On error + idle timeout |
