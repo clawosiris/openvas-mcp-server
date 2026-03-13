@@ -33,7 +33,7 @@ tomli-w = "^1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
-pytest-cov = "^4.0"
+pytest-cov = "^7.0"
 pytest-mock = "^3.0"
 pytest-asyncio = "^0.23"
 ruff = "^0.4"
