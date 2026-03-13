@@ -320,8 +320,6 @@ class BaseClientConfig:
     
     # Retry settings (triggered on error)
     retry_max_attempts: int = 3
-    retry_initial_delay: float = 1.0
-    retry_max_delay: float = 30.0
 
 
 @dataclass

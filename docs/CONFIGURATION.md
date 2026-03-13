@@ -55,9 +55,6 @@ class GvmConfig:
     
     # Retry settings (triggered on error)
     retry_max_attempts: int = 3
-    retry_initial_delay: float = 1.0
-    retry_max_delay: float = 30.0
-    retry_exponential_base: float = 2.0
 ```
 
 ---
@@ -180,16 +177,11 @@ Retry is triggered **on error only** (connection failures, timeouts, etc.).
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `retry_max_attempts` | int | `3` | Maximum retry attempts |
-| `retry_initial_delay` | float | `1.0` | Initial delay in seconds |
-| `retry_max_delay` | float | `30.0` | Maximum delay between retries |
-| `retry_exponential_base` | float | `2.0` | Exponential backoff multiplier |
 
 ### Environment Variables
 
 ```bash
 GVM_RETRY_MAX_ATTEMPTS=3
-GVM_RETRY_INITIAL_DELAY=1.0
-GVM_RETRY_MAX_DELAY=30.0
 ```
 
 ### Config File
@@ -197,9 +189,6 @@ GVM_RETRY_MAX_DELAY=30.0
 ```toml
 [retry]
 max_attempts = 3
-initial_delay = 1.0
-max_delay = 30.0
-exponential_base = 2.0
 ```
 
 ---
@@ -246,8 +235,6 @@ username = "mcp-service"
 
 [retry]
 max_attempts = 5
-initial_delay = 2.0
-max_delay = 60.0
 ```
 
 ---
@@ -322,8 +309,6 @@ Configuration saved to ~/.config/openvas-mcp/config.toml
 | `GVM_KEYFILE` | Remote | No | - |
 | `GVM_KEY_PASSWORD` | Remote | No | - |
 | `GVM_RETRY_MAX_ATTEMPTS` | All | No | `3` |
-| `GVM_RETRY_INITIAL_DELAY` | All | No | `1.0` |
-| `GVM_RETRY_MAX_DELAY` | All | No | `30.0` |
 
 *Required when using that style.
 

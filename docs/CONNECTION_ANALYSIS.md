@@ -230,10 +230,6 @@ class GvmClient:
 @dataclass
 class RetryConfig:
     max_attempts: int = 3
-    initial_delay: float = 1.0  # seconds
-    max_delay: float = 30.0
-    exponential_base: float = 2.0
-    jitter: bool = True
     
     # Retryable errors
     retryable_errors: tuple = (
@@ -252,7 +248,7 @@ def execute_with_retry(
     operation: Callable[[Gmp], T],
     retry_config: RetryConfig = None
 ) -> T:
-    """Execute with exponential backoff retry."""
+    """Execute with retry on error."""
     config = retry_config or self._default_retry_config
     last_error = None
     
@@ -266,25 +262,12 @@ def execute_with_retry(
                 raise  # Don't retry non-retryable errors
             
             if attempt < config.max_attempts - 1:
-                delay = self._calculate_delay(attempt, config)
                 logger.warning(
-                    f"Attempt {attempt + 1} failed: {e}. "
-                    f"Retrying in {delay:.1f}s..."
+                    f"Attempt {attempt + 1} failed: {e}. Retrying..."
                 )
-                time.sleep(delay)
                 self._reconnect()  # Force reconnection
     
     raise last_error
-
-def _calculate_delay(self, attempt: int, config: RetryConfig) -> float:
-    """Exponential backoff with jitter."""
-    delay = config.initial_delay * (config.exponential_base ** attempt)
-    delay = min(delay, config.max_delay)
-    
-    if config.jitter:
-        delay *= (0.5 + random.random())  # 50-150% of calculated delay
-    
-    return delay
 
 def _is_retryable(self, error: GvmError, config: RetryConfig) -> bool:
     """Check if error should trigger retry."""
@@ -487,9 +470,6 @@ class GvmConfig:
     
     # Retry
     retry_max_attempts: int = 3
-    retry_initial_delay: float = 1.0
-    retry_max_delay: float = 30.0
-    retry_exponential_base: float = 2.0
     
     # Circuit breaker
     circuit_failure_threshold: int = 5
