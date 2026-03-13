@@ -2,7 +2,7 @@
 
 import typer
 
-from .commands import system, targets, tasks
+from .commands import reports, system, targets, tasks
 
 app = typer.Typer(
     name="openvas",
@@ -14,6 +14,7 @@ app = typer.Typer(
 app.add_typer(system.app, name="system")
 app.add_typer(targets.app, name="target")
 app.add_typer(tasks.app, name="task")
+app.add_typer(reports.app, name="report")
 
 
 @app.command()
