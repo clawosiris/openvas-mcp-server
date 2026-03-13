@@ -68,7 +68,7 @@ pip install openvas-mcp
 ### Architecture
 
 - [Architecture Overview](docs/ARCHITECTURE.md)
-- [Phase Documents](docs/phases/)
+- [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
 
 ---
 
