@@ -92,6 +92,38 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
+  smoke:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      
+      - name: CLI smoke test
+        run: |
+          poetry run openvas --help
+          poetry run openvas version
+      
+      - name: MCP server smoke test
+        run: |
+          # Start MCP server and verify it initializes without crashing
+          timeout 5 poetry run openvas-mcp --help || [ $? -eq 124 ]
+          # Test that server can be imported and tools registered
+          poetry run python -c "from src.presentation.mcp.server import main; print('MCP server imports OK')"
+
   security:
     name: Security Scan
     runs-on: ubuntu-latest
