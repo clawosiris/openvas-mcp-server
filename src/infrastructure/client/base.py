@@ -166,13 +166,13 @@ class GvmClient(ABC):
 
         # Authenticate using versioned protocol
         try:
-            self._gmp.authenticate(
+            self._gmp.authenticate(  # type: ignore[union-attr]
                 username=self._config.gmp_username,
                 password=self._config.gmp_password,
             )
             logger.info(f"Authenticated as {self._config.gmp_username}")
         except GvmError as e:
-            self._gmp.disconnect()
+            self._gmp.disconnect()  # type: ignore[union-attr]
             self._gmp = None
             raise AuthenticationError(f"Authentication failed: {e}") from e
 
