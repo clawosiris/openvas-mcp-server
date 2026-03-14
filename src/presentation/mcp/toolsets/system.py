@@ -18,7 +18,7 @@ def register_system_tools(server: FastMCP, service: SystemService) -> None:
         service: System service instance.
     """
 
-    @server.tool(name="openvas_get_version")
+    @server.tool(structured_output=False, name="openvas_get_version")
     def get_version() -> dict[str, Any]:
         """Get GVM version information.
 
@@ -28,7 +28,7 @@ def register_system_tools(server: FastMCP, service: SystemService) -> None:
         result = service.get_version()
         return result.model_dump()
 
-    @server.tool(name="openvas_test_connection")
+    @server.tool(structured_output=False, name="openvas_test_connection")
     def test_connection() -> dict[str, Any]:
         """Test connection to GVM server.
 
