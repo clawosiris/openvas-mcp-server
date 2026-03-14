@@ -77,8 +77,7 @@ def main() -> None:
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport not in ("stdio", "sse", "streamable-http"):
         raise ValueError(
-            f"Invalid MCP_TRANSPORT='{transport}'. "
-            "Must be 'stdio', 'sse', or 'streamable-http'."
+            f"Invalid MCP_TRANSPORT='{transport}'. Must be 'stdio', 'sse', or 'streamable-http'."
         )
     server = create_server()
     server.run(transport=transport)
