@@ -3,8 +3,8 @@
 
 """MCP tools for target management."""
 
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.targets import (
     AliveTest,
@@ -12,9 +12,6 @@ from src.services.targets import (
     TargetService,
     TargetUpdateRequest,
 )
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_target_tools(server: FastMCP, service: TargetService) -> None:

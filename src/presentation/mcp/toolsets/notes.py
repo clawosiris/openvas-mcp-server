@@ -2,12 +2,10 @@
 # SPDX-FileCopyrightText: 2026 Greenbone AG
 
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.notes import NoteService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_note_tools(server: FastMCP, service: NoteService) -> None:

@@ -3,13 +3,10 @@
 
 """MCP tools for schedule management."""
 
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.schedules import ScheduleService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_schedule_tools(server: FastMCP, service: ScheduleService) -> None:

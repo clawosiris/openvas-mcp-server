@@ -2,12 +2,10 @@
 # SPDX-FileCopyrightText: 2026 Greenbone AG
 
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.tickets import TicketService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_ticket_tools(server: FastMCP, service: TicketService) -> None:

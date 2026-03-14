@@ -2,12 +2,10 @@
 # SPDX-FileCopyrightText: 2026 Greenbone AG
 
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.compliance import ComplianceService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_compliance_tools(server: FastMCP, service: ComplianceService) -> None:

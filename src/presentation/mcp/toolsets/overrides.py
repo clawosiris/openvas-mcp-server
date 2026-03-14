@@ -2,12 +2,10 @@
 # SPDX-FileCopyrightText: 2026 Greenbone AG
 
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.overrides import OverrideService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_override_tools(server: FastMCP, service: OverrideService) -> None:

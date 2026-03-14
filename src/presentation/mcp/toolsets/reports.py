@@ -3,14 +3,11 @@
 
 """MCP tools for report management."""
 
-
 import base64
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.reports import ReportFormat, ReportService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_report_tools(server: FastMCP, service: ReportService) -> None:
