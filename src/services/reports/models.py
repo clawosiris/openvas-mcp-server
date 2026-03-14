@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ReportFormat(str, Enum):
+class ReportFormat(StrEnum):
     """Report export formats."""
 
     XML = "xml"
@@ -24,7 +24,7 @@ class ReportFormat(str, Enum):
     VERINICE_ISM = "verinice-ism"
 
 
-class SeverityLevel(str, Enum):
+class SeverityLevel(StrEnum):
     """Vulnerability severity levels."""
 
     HIGH = "High"

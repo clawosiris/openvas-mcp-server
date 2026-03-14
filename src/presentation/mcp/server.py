@@ -3,6 +3,9 @@
 
 """MCP server entry point."""
 
+import os
+from typing import Literal, cast
+
 from mcp.server.fastmcp import FastMCP
 
 from src.infrastructure import ConfigLoader, create_client
@@ -70,10 +73,20 @@ def create_server() -> FastMCP:
     return server
 
 
+TransportType = Literal["stdio", "sse", "streamable-http"]
+
+VALID_TRANSPORTS: set[TransportType] = {"stdio", "sse", "streamable-http"}
+
+
 def main() -> None:
     """Run the MCP server."""
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport not in VALID_TRANSPORTS:
+        raise ValueError(
+            f"Invalid MCP_TRANSPORT='{transport}'. Must be 'stdio', 'sse', or 'streamable-http'."
+        )
     server = create_server()
-    server.run(transport="stdio")
+    server.run(transport=cast(TransportType, transport))
 
 
 if __name__ == "__main__":

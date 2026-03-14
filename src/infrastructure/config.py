@@ -12,12 +12,12 @@ from __future__ import annotations
 import os
 import tomllib
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 
-class ConnectionStyle(str, Enum):
+class ConnectionStyle(StrEnum):
     """Connection style to GVM."""
 
     LOCAL = "local"

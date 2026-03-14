@@ -76,11 +76,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: mcp
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
 
       - name: Create GitHub Release (standalone only)
         if: github.event_name == 'workflow_dispatch'

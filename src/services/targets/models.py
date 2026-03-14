@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class AliveTest(str, Enum):
+class AliveTest(StrEnum):
     """Methods for checking if hosts are alive."""
 
     SCAN_CONFIG_DEFAULT = "Scan Config Default"

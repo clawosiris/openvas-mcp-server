@@ -28,6 +28,7 @@ jobs:
       tag: ${{ needs.version.outputs.tag }}
     permissions:
       contents: write
+      packages: write
 
   mcp:
     name: Release MCP
@@ -48,29 +49,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download CLI artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: openvas-mcp-cli-${{ needs.version.outputs.version }}
-          path: dist/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           name: "Release ${{ needs.version.outputs.version }}"
-          files: dist/*
           body: |
             ## Installation
-            
-            ### CLI
-            ```bash
-            pip install openvas-mcp
-            ```
-            
-            ### Docker (MCP Server)
+
+            ### MCP Server
             ```bash
             docker pull ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}
+            ```
+
+            ### CLI
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/openvas-cli:${{ needs.version.outputs.version }}
             ```
           generate_release_notes: true
         env:
