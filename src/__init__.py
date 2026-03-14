@@ -1,3 +1,3 @@
 """OpenVAS MCP Server - MCP and CLI for Greenbone Vulnerability Management."""
 
-__version__ = "2025.03.0"
+__version__ = "2026.03.4"
