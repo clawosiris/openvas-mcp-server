@@ -1,0 +1,69 @@
+name: Generate Version
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component suffix for version tag (cli, mcp, or empty for full release)"
+        required: false
+        type: string
+        default: ""
+    outputs:
+      version:
+        description: "Generated version number"
+        value: ${{ jobs.version.outputs.version }}
+      tag:
+        description: "Generated git tag"
+        value: ${{ jobs.version.outputs.tag }}
+
+jobs:
+  version:
+    name: Generate Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate version
+        id: version
+        run: |
+          COMPONENT="${{ inputs.component }}"
+          
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Use existing tag
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+          else
+            # Generate calver: YYYY.MM.patch
+            YEAR=$(date +%Y)
+            MONTH=$(date +%m)
+            
+            if [[ -n "$COMPONENT" ]]; then
+              # Component-specific release: v2026.03.0-cli, v2026.03.1-mcp
+              PATCH=$(git tag -l "v${YEAR}.${MONTH}.*-${COMPONENT}" | wc -l)
+              VERSION="${YEAR}.${MONTH}.${PATCH}"
+              TAG="v${VERSION}-${COMPONENT}"
+            else
+              # Full release: v2026.03.0
+              PATCH=$(git tag -l "v${YEAR}.${MONTH}.[0-9]*" | grep -v "-" | wc -l || echo 0)
+              VERSION="${YEAR}.${MONTH}.${PATCH}"
+              TAG="v${VERSION}"
+            fi
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}, tag: ${TAG}"
+
+      - name: Create and push tag
+        if: github.ref_type != 'tag'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
