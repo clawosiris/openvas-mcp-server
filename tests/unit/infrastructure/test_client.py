@@ -39,13 +39,18 @@ class TestGvmClientBase:
         """First execute() call establishes connection."""
         mock_gmp = MagicMock()
         mock_gmp.is_connected.return_value = False
+
+        # Mock the versioned GMP returned by determine_supported_gmp
+        mock_versioned_gmp = MagicMock()
+        mock_gmp.determine_supported_gmp.return_value = mock_versioned_gmp
         mock_gmp_class.return_value = mock_gmp
 
         client = LocalClient(valid_local_config)
         client.execute(lambda gmp: gmp.get_version())
 
         mock_gmp.connect.assert_called_once()
-        mock_gmp.authenticate.assert_called_once_with(
+        mock_gmp.determine_supported_gmp.assert_called_once()
+        mock_versioned_gmp.authenticate.assert_called_once_with(
             username="admin",
             password="secret",
         )
@@ -130,7 +135,11 @@ class TestGvmClientBase:
         """Authentication failure raises AuthenticationError."""
         mock_gmp = MagicMock()
         mock_gmp.is_connected.return_value = False
-        mock_gmp.authenticate.side_effect = GvmError("Authentication failed")
+
+        # Mock the versioned GMP with failing authenticate
+        mock_versioned_gmp = MagicMock()
+        mock_versioned_gmp.authenticate.side_effect = GvmError("Authentication failed")
+        mock_gmp.determine_supported_gmp.return_value = mock_versioned_gmp
         mock_gmp_class.return_value = mock_gmp
 
         client = LocalClient(valid_local_config)

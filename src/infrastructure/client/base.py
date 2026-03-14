@@ -154,21 +154,25 @@ class GvmClient(ABC):
         transform = EtreeCheckCommandTransform()  # type: ignore[no-untyped-call]
 
         try:
-            self._gmp = Gmp(connection=connection, transform=transform)
-            self._gmp.connect()
+            gmp = Gmp(connection=connection, transform=transform)
+            gmp.connect()
+
+            # Determine the supported GMP version and get versioned protocol
+            # Returns GMPv224, GMPv225, GMPv226, GMPv227, or GMPNext
+            self._gmp = gmp.determine_supported_gmp()  # type: ignore[assignment]
             logger.info(f"Connected to GVM via {self._config.style.value}")
         except Exception as e:
             raise ConnectionError(f"Failed to connect to GVM: {e}") from e
 
-        # Authenticate
+        # Authenticate using versioned protocol
         try:
-            self._gmp.authenticate(  # type: ignore[attr-defined]
+            self._gmp.authenticate(  # type: ignore[union-attr]
                 username=self._config.gmp_username,
                 password=self._config.gmp_password,
             )
             logger.info(f"Authenticated as {self._config.gmp_username}")
         except GvmError as e:
-            self._gmp.disconnect()
+            self._gmp.disconnect()  # type: ignore[union-attr]
             self._gmp = None
             raise AuthenticationError(f"Authentication failed: {e}") from e
 
