@@ -93,7 +93,7 @@ disable_error_code = ["arg-type", "no-untyped-def"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/unit"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = [
@@ -102,8 +102,9 @@ addopts = [
     "--strict-markers",
 ]
 markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
+    "unit: Unit tests (mocked, fast)",
+    "e2e: End-to-end tests (requires live GVM)",
+    "slow: Slow tests",
 ]
 
 # Coverage configuration
