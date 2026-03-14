@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from gvm.connections import GvmConnection
 from gvm.errors import GvmError
 from gvm.protocols.gmp import Gmp
+from gvm.protocols.gmpv224 import GmpProtocol
 from gvm.transforms import EtreeCheckCommandTransform
 
 if TYPE_CHECKING:
@@ -154,15 +155,19 @@ class GvmClient(ABC):
         transform = EtreeCheckCommandTransform()  # type: ignore[no-untyped-call]
 
         try:
-            self._gmp = Gmp(connection=connection, transform=transform)
-            self._gmp.connect()
+            gmp = Gmp(connection=connection, transform=transform)
+            gmp.connect()
+
+            # Determine the supported GMP version and get versioned protocol
+            versioned_gmp: GmpProtocol = gmp.determine_supported_gmp()
+            self._gmp = versioned_gmp  # type: ignore[assignment]
             logger.info(f"Connected to GVM via {self._config.style.value}")
         except Exception as e:
             raise ConnectionError(f"Failed to connect to GVM: {e}") from e
 
-        # Authenticate
+        # Authenticate using versioned protocol
         try:
-            self._gmp.authenticate(  # type: ignore[attr-defined]
+            self._gmp.authenticate(
                 username=self._config.gmp_username,
                 password=self._config.gmp_password,
             )
