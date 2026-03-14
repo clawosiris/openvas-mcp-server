@@ -4,6 +4,7 @@
 """MCP tools for port list management."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.port_lists import PortListService

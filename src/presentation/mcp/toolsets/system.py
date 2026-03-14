@@ -4,6 +4,7 @@
 """MCP tools for system operations."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.system import SystemService

@@ -4,6 +4,7 @@
 """MCP tools for task (scan) management."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.tasks import TaskCreateRequest, TaskService

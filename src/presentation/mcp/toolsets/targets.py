@@ -4,6 +4,7 @@
 """MCP tools for target management."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.targets import (

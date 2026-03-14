@@ -4,6 +4,7 @@
 """MCP tools for scan config management."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.scan_configs import ScanConfigService

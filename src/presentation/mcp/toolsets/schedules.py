@@ -4,6 +4,7 @@
 """MCP tools for schedule management."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.schedules import ScheduleService

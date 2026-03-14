@@ -3,6 +3,7 @@
 
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.assets import AssetService

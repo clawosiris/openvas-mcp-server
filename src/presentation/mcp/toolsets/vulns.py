@@ -4,6 +4,7 @@
 """MCP tools for vulnerability operations."""
 
 from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from src.services.vulns import VulnerabilityService
