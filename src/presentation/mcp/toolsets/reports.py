@@ -19,7 +19,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
         service: Report service instance.
     """
 
-    @server.tool(name="openvas_list_reports")
+    @server.tool(structured_output=False, name="openvas_list_reports")
     def list_reports(filter: str = "") -> dict[str, Any]:
         """List all scan reports.
 
@@ -32,7 +32,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
         result = service.list(filter)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_report")
+    @server.tool(structured_output=False, name="openvas_get_report")
     def get_report(report_id: str) -> dict[str, Any]:
         """Get report metadata by ID.
 
@@ -45,7 +45,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
         result = service.get(report_id)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_report_detail")
+    @server.tool(structured_output=False, name="openvas_get_report_detail")
     def get_report_detail(report_id: str, min_qod: int = 70) -> dict[str, Any]:
         """Get detailed report with all vulnerabilities.
 
@@ -59,7 +59,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
         result = service.get_detail(report_id, min_qod=min_qod)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_report_summary")
+    @server.tool(structured_output=False, name="openvas_get_report_summary")
     def get_report_summary(report_id: str) -> dict[str, Any]:
         """Get report summary statistics.
 
@@ -73,7 +73,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
         result = service.get_summary(report_id)
         return result.model_dump()
 
-    @server.tool(name="openvas_export_report")
+    @server.tool(structured_output=False, name="openvas_export_report")
     def export_report(
         report_id: str,
         format: str = "pdf",
@@ -102,7 +102,7 @@ def register_report_tools(server: FastMCP, service: ReportService) -> None:
             "size_bytes": len(content),
         }
 
-    @server.tool(name="openvas_delete_report")
+    @server.tool(structured_output=False, name="openvas_delete_report")
     def delete_report(report_id: str) -> dict[str, Any]:
         """Delete a report.
 

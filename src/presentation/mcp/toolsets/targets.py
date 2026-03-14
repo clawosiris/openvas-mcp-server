@@ -23,7 +23,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         service: Target service instance.
     """
 
-    @server.tool(name="openvas_list_targets")
+    @server.tool(structured_output=False, name="openvas_list_targets")
     def list_targets(filter: str = "") -> dict[str, Any]:
         """List all scan targets.
 
@@ -36,7 +36,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         result = service.list(filter)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_target")
+    @server.tool(structured_output=False, name="openvas_get_target")
     def get_target(target_id: str) -> dict[str, Any]:
         """Get target details by ID.
 
@@ -49,7 +49,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         result = service.get(target_id)
         return result.model_dump()
 
-    @server.tool(name="openvas_create_target")
+    @server.tool(structured_output=False, name="openvas_create_target")
     def create_target(
         name: str,
         hosts: list[str],
@@ -94,7 +94,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         result = service.create(request)
         return result.model_dump()
 
-    @server.tool(name="openvas_update_target")
+    @server.tool(structured_output=False, name="openvas_update_target")
     def update_target(
         target_id: str,
         name: str | None = None,
@@ -137,7 +137,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         result = service.update(target_id, request)
         return result.model_dump()
 
-    @server.tool(name="openvas_delete_target")
+    @server.tool(structured_output=False, name="openvas_delete_target")
     def delete_target(target_id: str, ultimate: bool = False) -> dict[str, Any]:
         """Delete a target.
 
@@ -151,7 +151,7 @@ def register_target_tools(server: FastMCP, service: TargetService) -> None:
         success = service.delete(target_id, ultimate=ultimate)
         return {"success": success, "target_id": target_id}
 
-    @server.tool(name="openvas_clone_target")
+    @server.tool(structured_output=False, name="openvas_clone_target")
     def clone_target(target_id: str) -> dict[str, Any]:
         """Clone an existing target.
 

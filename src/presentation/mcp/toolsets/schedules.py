@@ -13,12 +13,12 @@ from src.services.schedules import ScheduleService
 def register_schedule_tools(server: FastMCP, service: ScheduleService) -> None:
     """Register schedule management tools."""
 
-    @server.tool(name="openvas_list_schedules")
+    @server.tool(structured_output=False, name="openvas_list_schedules")
     def list_schedules(filter: str = "") -> dict[str, Any]:
         result = service.list(filter)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_schedule")
+    @server.tool(structured_output=False, name="openvas_get_schedule")
     def get_schedule(schedule_id: str) -> dict[str, Any]:
         result = service.get(schedule_id)
         return result.model_dump()
