@@ -13,6 +13,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -24,15 +28,14 @@ jobs:
     uses: ./.github/workflows/version.yml
     with:
       component: mcp
+    permissions:
+      contents: write
 
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     needs: [version]
     if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
-    permissions:
-      contents: write
-      packages: write
 
     steps:
       - name: Set version from workflow_call or version job
