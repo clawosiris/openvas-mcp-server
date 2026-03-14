@@ -3,7 +3,6 @@
 
 """MCP tools for vulnerability operations."""
 
-from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
