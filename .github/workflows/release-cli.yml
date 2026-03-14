@@ -30,65 +30,6 @@ jobs:
     permissions:
       contents: write
 
-  build:
-    name: Build CLI
-    runs-on: ubuntu-latest
-    needs: [version]
-    if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
-
-    steps:
-      - name: Set version from workflow_call or version job
-        id: vars
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "version=${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
-            echo "tag=${{ needs.version.outputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
-            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
-          fi
-
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ steps.vars.outputs.tag }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Update version in pyproject.toml
-        run: poetry version ${{ steps.vars.outputs.version }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
-
-      - name: Run tests
-        run: poetry run pytest
-
-      - name: Build package
-        run: poetry build
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: openvas-mcp-cli-${{ steps.vars.outputs.version }}
-          path: dist/*
-
-      - name: Create GitHub Release (standalone only)
-        if: github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.vars.outputs.tag }}
-          name: "CLI ${{ steps.vars.outputs.version }}"
-          files: dist/*
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   docker:
     name: Build and Push CLI Docker Image
     runs-on: ubuntu-latest
@@ -140,3 +81,19 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=cli
           cache-to: type=gha,mode=max,scope=cli
+
+      - name: Create GitHub Release (standalone only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "CLI ${{ steps.vars.outputs.version }}"
+          body: |
+            ## Docker Image
+
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/openvas-cli:${{ steps.vars.outputs.version }}
+            ```
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
