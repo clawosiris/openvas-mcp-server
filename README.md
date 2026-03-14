@@ -7,46 +7,51 @@ MCP server and CLI for Greenbone Vulnerability Management (GVM/OpenVAS).
 
 ---
 
-## Quick Install
+## Quick Start
 
-### CLI
+### Prerequisites
 
-```bash
-pip install openvas-mcp
+- [Greenbone Community Edition](https://greenbone.github.io/docs/latest/) containers installed and running
 
-# Configure
-openvas configure
-
-# Test connection
-openvas test
-```
-
-### MCP Server
+### 1. Add OpenVAS to Your Greenbone Stack
 
 ```bash
-# Docker
-docker pull ghcr.io/clawosiris/openvas-mcp-server:latest
+# Clone this repository
+git clone https://github.com/clawosiris/openvas-mcp-server.git
 
-# Or install directly
-pip install openvas-mcp
+# Copy the override file to your Greenbone CE directory
+cp openvas-mcp-server/docker-compose.override.yml /path/to/greenbone-community-container/
+
+# Start the services you need
+cd /path/to/greenbone-community-container
+docker compose up -d openvas-mcp              # MCP server only
+docker compose up -d openvas-cli              # CLI only
+docker compose up -d openvas-mcp openvas-cli  # Both
 ```
 
-**MCP Client Configuration (Claude Desktop):**
+### 2. Configure Your MCP Client
+
+Add to Claude Desktop or Claude Code configuration:
 
 ```json
 {
   "mcpServers": {
     "openvas": {
-      "command": "openvas-mcp",
-      "env": {
-        "GVM_STYLE": "local",
-        "GVM_SOCKET_PATH": "/run/gvmd/gvmd.sock",
-        "GVM_USERNAME": "admin",
-        "GVM_PASSWORD": "secret"
-      }
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
+```
+
+### 3. Set Up the CLI (Optional)
+
+```bash
+# Add alias to your shell (zsh)
+echo 'alias openvas="docker exec -it greenbone-community-edition-openvas-cli-1 openvas"' >> ~/.zshrc
+source ~/.zshrc
+
+# Test
+openvas system test
 ```
 
 ---
@@ -57,13 +62,11 @@ pip install openvas-mcp
 
 - [Installation](docs/cli/installation.md)
 - [Usage](docs/cli/usage.md)
-- [Development](docs/cli/development.md)
 
 ### MCP
 
 - [Installation](docs/mcp/installation.md)
 - [Usage](docs/mcp/usage.md)
-- [Development](docs/mcp/development.md)
 
 ### Architecture
 
@@ -77,6 +80,7 @@ pip install openvas-mcp
 - **MCP Server**: AI agent integration via Model Context Protocol
 - **CLI**: Command-line interface for human operators
 - **Full GVM Coverage**: Targets, scans, reports, vulnerabilities, compliance, and more
+- **Fully Dockerized**: Separate MCP and CLI containers, runs inside the Greenbone Community Container stack
 - **Two Connection Modes**: Local (Unix socket) and remote (TLS)
 - **Retry on Error**: Automatic reconnection with retry
 
@@ -84,9 +88,8 @@ pip install openvas-mcp
 
 ## Requirements
 
-- Python 3.11+
-- GVM/OpenVAS (gvmd daemon)
-- Access to gvmd via socket or TLS
+- Docker and Docker Compose
+- Greenbone Community Edition containers
 
 ---
 
@@ -94,39 +97,17 @@ pip install openvas-mcp
 
 ### Environment Variables
 
-```bash
-# Connection style
-GVM_STYLE=local          # or 'remote'
-
-# Local (socket)
-GVM_SOCKET_PATH=/run/gvmd/gvmd.sock
-
-# Remote (TLS)
-GVM_HOSTNAME=gvm.example.com
-GVM_PORT=9390
-GVM_CAFILE=/path/to/ca.pem       # optional
-
-# Authentication
-GVM_USERNAME=admin
-GVM_PASSWORD=secret
-
-# Common
-GVM_TIMEOUT=60
-GVM_RETRY_MAX_ATTEMPTS=3
-```
-
-### Config File (CLI)
-
-```toml
-# ~/.config/openvas-mcp/config.toml
-[connection]
-style = "local"
-socket_path = "/run/gvmd/gvmd.sock"
-
-[auth]
-username = "admin"
-# password via GVM_PASSWORD env var
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TRANSPORT` | `stdio` | Transport mode: `stdio`, `sse`, or `streamable-http` |
+| `GVM_STYLE` | `local` | Connection style: `local` or `remote` |
+| `GVM_SOCKET_PATH` | `/run/gvmd/gvmd.sock` | Unix socket path |
+| `GVM_HOSTNAME` | `127.0.0.1` | Remote GVM hostname |
+| `GVM_PORT` | `9390` | Remote GVM port |
+| `GVM_USERNAME` | - | GMP username (required) |
+| `GVM_PASSWORD` | - | GMP password (required) |
+| `GVM_TIMEOUT` | `60` | Operation timeout (seconds) |
+| `GVM_RETRY_MAX_ATTEMPTS` | `3` | Max retry attempts |
 
 ---
 

@@ -1,0 +1,50 @@
+# OpenVAS MCP Server & CLI - Docker Compose Override for Greenbone Community Edition
+#
+# Copy this file to your Greenbone Community Edition directory:
+#   cp docker-compose.override.yml /path/to/greenbone-community-container/
+#
+# Start the services you need:
+#   docker compose up -d openvas-mcp              # MCP server only
+#   docker compose up -d openvas-cli              # CLI only
+#   docker compose up -d openvas-mcp openvas-cli  # Both
+#
+# MCP server: http://localhost:8080/mcp
+# CLI: docker exec -it greenbone-community-edition-openvas-cli-1 openvas <command>
+
+services:
+  openvas-mcp:
+    image: ghcr.io/clawosiris/openvas-mcp-server:latest
+    restart: on-failure
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      GVM_STYLE: local
+      GVM_SOCKET_PATH: /run/gvmd/gvmd.sock
+      GVM_USERNAME: ${GVM_USERNAME:-admin}
+      GVM_PASSWORD: ${GVM_PASSWORD:-admin}
+      GVM_TIMEOUT: "60"
+      FASTMCP_HOST: "0.0.0.0"
+      FASTMCP_PORT: "8000"
+    volumes:
+      - gvmd_socket_vol:/run/gvmd
+    depends_on:
+      gvmd:
+        condition: service_started
+
+  openvas-cli:
+    image: ghcr.io/clawosiris/openvas-cli:latest
+    entrypoint: []
+    command: ["sleep", "infinity"]
+    restart: on-failure
+    environment:
+      GVM_STYLE: local
+      GVM_SOCKET_PATH: /run/gvmd/gvmd.sock
+      GVM_USERNAME: ${GVM_USERNAME:-admin}
+      GVM_PASSWORD: ${GVM_PASSWORD:-admin}
+      GVM_TIMEOUT: "60"
+    volumes:
+      - gvmd_socket_vol:/run/gvmd
+    depends_on:
+      gvmd:
+        condition: service_started
