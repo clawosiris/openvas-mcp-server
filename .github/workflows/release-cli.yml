@@ -13,6 +13,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   version:
     name: Generate Version
@@ -20,14 +23,14 @@ jobs:
     uses: ./.github/workflows/version.yml
     with:
       component: cli
+    permissions:
+      contents: write
 
   build:
     name: Build CLI
     runs-on: ubuntu-latest
     needs: [version]
     if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
-    permissions:
-      contents: write
 
     steps:
       - name: Set version from workflow_call or version job
