@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Greenbone AG
+
 """Abstract base client for GVM connections.
 
 Provides thread-safe operation execution with retry on error.

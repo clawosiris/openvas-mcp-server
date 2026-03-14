@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Greenbone AG
+
 """Custom exception hierarchy for OpenVAS MCP.
 
 All errors provide:

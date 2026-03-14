@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Greenbone AG
+
 """Configuration loading and management.
 
 Supports loading from environment variables or TOML config file.
