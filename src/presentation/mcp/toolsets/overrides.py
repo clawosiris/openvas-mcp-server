@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 Greenbone AG
 
-from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from mcp.server.fastmcp import FastMCP
 
 from src.services.overrides import OverrideService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_override_tools(server: FastMCP, service: OverrideService) -> None:

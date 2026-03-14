@@ -3,14 +3,11 @@
 
 """MCP tools for system operations."""
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.system import SystemService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_system_tools(server: FastMCP, service: SystemService) -> None:

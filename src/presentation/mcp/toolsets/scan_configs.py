@@ -3,14 +3,11 @@
 
 """MCP tools for scan config management."""
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.scan_configs import ScanConfigService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_scan_config_tools(server: FastMCP, service: ScanConfigService) -> None:

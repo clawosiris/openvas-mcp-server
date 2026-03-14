@@ -3,14 +3,11 @@
 
 """MCP tools for task (scan) management."""
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.tasks import TaskCreateRequest, TaskService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_task_tools(server: FastMCP, service: TaskService) -> None:

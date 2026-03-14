@@ -3,14 +3,11 @@
 
 """MCP tools for port list management."""
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+from mcp.server.fastmcp import FastMCP
 
 from src.services.port_lists import PortListService
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 
 def register_port_list_tools(server: FastMCP, service: PortListService) -> None:
