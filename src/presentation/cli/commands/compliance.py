@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Annotated
 
 import typer
 from rich import print as rprint
@@ -16,19 +17,27 @@ def _svc() -> ComplianceService:
 
 
 @app.command("policies")
-def policies(json_output: bool = False) -> None:
+def policies(
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
     out = _svc().list_policies()
     rprint(json.dumps(out.model_dump(), indent=2) if json_output else out.model_dump())
 
 
 @app.command("audits")
-def audits(filter: str = "", json_output: bool = False) -> None:
+def audits(
+    filter: Annotated[str, typer.Option("--filter", "-f", help="GMP filter string")] = "",
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
     out = _svc().list_audits(filter)
     rprint(json.dumps(out, indent=2) if json_output else out)
 
 
 @app.command("audit")
-def get_audit(audit_id: str, json_output: bool = False) -> None:
+def get_audit(
+    audit_id: str,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
     out = _svc().get_audit(audit_id)
     rprint(json.dumps(out, indent=2) if json_output else out)
 
@@ -44,6 +53,9 @@ def stop(audit_id: str) -> None:
 
 
 @app.command("status")
-def status(target_id: str, json_output: bool = False) -> None:
+def status(
+    target_id: str,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
     out = _svc().get_compliance_status(target_id)
     rprint(json.dumps(out.model_dump(), indent=2) if json_output else out.model_dump())
