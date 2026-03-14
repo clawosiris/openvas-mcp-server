@@ -1,232 +1,248 @@
-# Project Journal
+# Project Journal: Building an MCP Server with AI
 
-Development log for the OpenVAS MCP Server — an AI-assisted build.
+_How we built a complete MCP server for Greenbone Vulnerability Management using human-AI collaboration._
 
 ---
 
-## Project Origin
+## The Goal
 
-**Human Input:** Daniel Riek filed [Issue #1 on Codeberg](https://codeberg.org/llnvd/gvm-tools/issues/1) with a detailed specification for building an MCP server that exposes Greenbone Vulnerability Management operations to AI agents. The spec included:
+Build an MCP (Model Context Protocol) server that exposes Greenbone Vulnerability Management (GVM/OpenVAS) operations as tools for AI agents. The server needed to:
 
-- Target architecture: MCP Client → GVM MCP Server → python-gvm → GMP → gvmd
-- ~25 tool definitions across targets, scans, reports, vulnerabilities, and data extraction
-- Configuration schema supporting Unix socket and TLS connections
-- Test requirements (unit, integration, mocks)
-- A focus on **data extraction and reporting** — enabling agents to prioritize remediation, compare reports, and generate executive summaries
+- Enable AI agents to perform vulnerability scanning and management
+- Use `python-gvm` directly (not shell out to CLI tools)
+- Provide structured JSON responses
+- Support both Unix socket and TLS connections
+- Include a CLI for human operators
 
-**Key Constraint:** Use `python-gvm` directly for native GMP protocol handling. Do NOT shell out to `gvm-cli`.
+**Architecture:**
+```
+MCP Client (Claude, OpenClaw, etc.)
+    ↓ MCP Protocol (JSON-RPC)
+OpenVAS MCP Server
+    ↓ python-gvm
+GMP Protocol (XML)
+    ↓
+gvmd (Greenbone Vulnerability Manager)
+```
+
+---
+
+## How We Worked Together
+
+The development followed a consistent pattern:
+
+1. **Human provides direction** — high-level goals, constraints, decisions on scope
+2. **AI implements** — writes code, tests, docs; follows established patterns
+3. **Human reviews** — PRs, course corrections, architectural decisions
+4. **Iterate** — refine based on feedback, then move to next phase
+
+The human stayed in the driver's seat for _what_ to build and _why_. The AI handled the _how_ — translating requirements into working code, maintaining consistency across the codebase, and handling the repetitive parts of implementation.
 
 ---
 
 ## Development Log
 
-### Phase 1: Foundation
+### Starting Point: The Spec
 
-**Human Input:** "Start with the foundation — project scaffold, configuration loading, GVM client abstraction, error handling."
+**Human:** Filed an issue with a detailed specification:
+- ~25 MCP tools across targets, scans, reports, vulnerabilities, data extraction
+- Configuration schema for socket and TLS connections  
+- Test requirements (unit, integration, mocks)
+- Key constraint: use `python-gvm` directly, not CLI wrappers
 
-**Work Done:**
-- Created project structure: `src/`, `tests/`, `docs/`, CI workflows
-- Set up Poetry with Ruff (linting), Mypy (strict typing), Pytest
-- Implemented GVM client layer with factory pattern:
-  - `LocalConnection` (Unix socket via `UnixSocketConnection`)
-  - `RemoteConnection` (TLS via `TLSConnection`)
-- Built configuration loader supporting:
-  - Environment variables (`GVM_STYLE`, `GVM_SOCKET_PATH`, `GVM_USERNAME`, etc.)
-  - TOML config file (`~/.config/openvas-mcp/config.toml`)
-- Created structured error hierarchy (`GVMError`, `ConnectionError`, `AuthenticationError`, `ValidationError`, etc.)
-- Added XML-to-dict helper utilities for parsing GMP responses
-- Wrote 34 unit tests for infrastructure layer
-
-**PR:** [#1 — Phase 1: Foundation](https://github.com/clawosiris/openvas-mcp-server/pull/1)
+This spec was the foundation. Having clear requirements upfront made the AI implementation much more effective — less back-and-forth on basic decisions, more focus on execution.
 
 ---
 
-### Architecture Decisions
+### Phase 1: Foundation
 
-**Human Input:** "Review the CLI UI interactions. Let's see mockups for first-run setup, help, and command output."
+**Human:** "Start with the foundation — project scaffold, configuration loading, GVM client abstraction, error handling."
 
-**Work Done:**
-- Created `docs/CLI_UI_REVIEW.md` with mockups for:
-  - First-run configuration wizard
-  - Help output with Rich formatting
-  - Table output for list commands
-  - JSON output mode
-- Decided on `openvas` CLI command name (not `gvm` to avoid conflict with existing tools)
-- Designed `openvas configure` interactive setup and `openvas test` connection validation
+**AI Work:**
+- Created project structure with Poetry, Ruff, Mypy, Pytest
+- Implemented GVM client layer with factory pattern:
+  - `LocalConnection` (Unix socket)
+  - `RemoteConnection` (TLS)
+- Built configuration loader supporting env vars and TOML config files
+- Created structured error hierarchy
+- Added XML-to-dict utilities for parsing GMP responses
+- Wrote 34 unit tests
 
-**Human Input:** "Simplify the connection modes — just local and remote, remove SSH tunneling. Also, remove idle timeout; retry should only trigger on error."
+**Why this worked:** The human gave a clear scope ("foundation") and the AI filled in the implementation details. The AI could make reasonable decisions about structure (factory pattern, error hierarchy) without needing approval for every choice.
 
-**Work Done:**
-- Removed SSH tunnel connection type from architecture docs
-- Simplified retry logic: no delay parameters, just `max_attempts` with retry-on-error
-- Updated `docs/ARCHITECTURE.md` to reflect simplified design
+---
+
+### Architecture Refinements
+
+**Human:** "Review the CLI UI interactions. Let's see mockups for first-run setup and command output."
+
+**AI Work:** Created mockups showing:
+- First-run configuration wizard
+- Help output with Rich formatting
+- Table and JSON output modes
+
+**Human:** "Simplify — just local and remote connection modes, remove SSH tunneling. Also, remove idle timeout; retry only on error."
+
+**AI Work:** Updated architecture docs, removed SSH tunnel code path, simplified retry logic.
+
+**Why this worked:** The human spotted complexity that wasn't needed. Quick course correction before it got baked into implementation.
 
 ---
 
 ### Phase 2: Target Service
 
-**Human Input:** "Implement target management — CRUD operations for scan targets."
+**Human:** "Implement target management — CRUD operations for scan targets."
 
-**Work Done:**
-- Created `TargetService` with methods:
-  - `list_targets()` — list all targets with filtering
-  - `get_target(id)` — get target details
-  - `create_target(name, hosts, port_list_id, ...)` — create new target
-  - `update_target(id, ...)` — modify existing target
-  - `delete_target(id)` — remove target
-- Built Pydantic models: `Target`, `TargetCreate`, `TargetUpdate`
-- Wired MCP tools: `gvm_list_targets`, `gvm_get_target`, `gvm_create_target`, `gvm_delete_target`
-- Added CLI commands: `openvas target list`, `openvas target get`, `openvas target create`, etc.
-- Wrote unit tests for service layer
+**AI Work:**
+- Created `TargetService` with list/get/create/update/delete methods
+- Built Pydantic models for validation
+- Wired MCP tools: `gvm_list_targets`, `gvm_create_target`, etc.
+- Added CLI commands: `openvas target list`, `openvas target create`, etc.
+- Wrote unit tests
 
-**PR:** [#13 — Phase 2: Target Service](https://github.com/clawosiris/openvas-mcp-server/pull/13)
-
----
-
-### System Service (Interlude)
-
-**Human Input:** "Add a system/version endpoint so agents can verify connectivity and GVM version."
-
-**Work Done:**
-- Created `SystemService` with `get_version()` method
-- Exposed `gvm_get_version` MCP tool
-- Added `openvas system version` CLI command
-- Set up manual release trigger in CI workflow
-
-**PR:** [#14 — System Service](https://github.com/clawosiris/openvas-mcp-server/pull/14)
+This established the pattern for all subsequent services: Service class → Pydantic models → MCP tools → CLI commands → Tests.
 
 ---
 
 ### Phase 3: Scan/Task Service
 
-**Human Input:** "Now the core — scan task management. Create, start, stop, monitor, delete."
+**Human:** "Now the core — scan task management. Create, start, stop, monitor, delete."
 
-**Work Done:**
-- Created `TaskService` with methods:
-  - `list_tasks()` — list all scan tasks
-  - `get_task(id)` — get task details with status
-  - `create_task(name, target_id, config_id, ...)` — create scan task
-  - `start_task(id)` — launch scan
-  - `stop_task(id)` — abort running scan
-  - `resume_task(id)` — resume stopped scan
-  - `delete_task(id)` — remove task
-- Built Pydantic models: `Task`, `TaskStatus`, `TaskCreate`
-- Wired MCP tools: `gvm_list_scans`, `gvm_start_scan`, `gvm_stop_scan`, `gvm_get_scan_status`
-- Added CLI commands: `openvas scan list`, `openvas scan start <id>`, etc.
-- Added CalVer tagging to release workflow
-- Added Docker image build/push to CI
-- Added CLI artifact uploads
+**AI Work:**
+- Implemented `TaskService` following the established pattern
+- Added task lifecycle methods: start, stop, resume
+- Wired MCP tools and CLI commands
+- Added CalVer tagging, Docker builds, and CLI artifacts to release workflow
 
-**PR:** [#15 — Phase 3: Scan Service](https://github.com/clawosiris/openvas-mcp-server/pull/15)
+**Why this worked:** With the pattern established in Phase 2, the AI could replicate it efficiently. The human just specified _which_ domain to implement next.
 
 ---
 
 ### Phase 4: Report Service
 
-**Human Input:** "Reports are key for extraction. Need to get reports, export in multiple formats, and extract vulnerability data."
+**Human:** "Reports are key for extraction. Need to get reports, export in multiple formats, extract vulnerability data."
 
-**Work Done:**
-- Created `ReportService` with methods:
-  - `list_reports()` — list all reports with filters
-  - `get_report(id)` — get full report with results
-  - `get_report_summary(id)` — severity counts and host stats
-  - `export_report(id, format)` — export as PDF, CSV, XML, etc.
-  - `delete_report(id)` — remove report
-- Built models: `Report`, `ReportResult`, `ReportSummary`
-- Wired MCP tools: `gvm_list_reports`, `gvm_get_report`, `gvm_export_report`
-- Added CLI: `openvas report list`, `openvas report export <id> --format pdf`
-
-**PR:** [#16 — Phase 4: Report Service](https://github.com/clawosiris/openvas-mcp-server/pull/16)
+**AI Work:**
+- Created `ReportService` with list, get, export, delete methods
+- Built report summary extraction (severity counts, host stats)
+- Added export formats: PDF, CSV, XML
+- Wired MCP tools and CLI
 
 ---
 
 ### Phase 5: Utility Services
 
-**Human Input:** "Add the supporting infrastructure — scan configs, port lists, schedules."
+**Human:** "Add the supporting infrastructure — scan configs, port lists, schedules."
 
-**Work Done:**
-- **ScanConfigService**: List and manage scan configurations
-- **PortListService**: CRUD for port list definitions
-- **ScheduleService**: Create and manage scheduled scans
-- MCP tools and CLI commands for all three
-- Maintained consistent patterns from earlier phases
-
-**PR:** [#17 — Phase 5: Utility Services](https://github.com/clawosiris/openvas-mcp-server/pull/17)
+**AI Work:**
+- Implemented three services in one phase (established patterns made this fast):
+  - `ScanConfigService`
+  - `PortListService`  
+  - `ScheduleService`
+- MCP tools and CLI for all three
 
 ---
 
-### Phase 6: Vulnerability & Extended Services
+### Phase 6: Extended Services
 
-**Human Input:** "Complete the remaining services from the spec — vulnerabilities, notes, overrides, tickets, assets, compliance."
+**Human:** "Complete the remaining services — vulnerabilities, notes, overrides, tickets, assets, compliance."
 
-**Work Done:**
-- **VulnerabilityService**: Query CVE data, search NVTs, extract vuln details
-- **NoteService**: Add/manage annotations on vulnerabilities
-- **OverrideService**: False positive management
-- **TicketService**: Remediation tracking
-- **AssetService**: Host and OS asset queries
-- **ComplianceService**: Policy and audit management
-- Consolidated all phase docs into single `IMPLEMENTATION_STATUS.md`
-- Aligned usage docs with implemented commands
-
-**PRs:** [#18](https://github.com/clawosiris/openvas-mcp-server/pull/18), [#19](https://github.com/clawosiris/openvas-mcp-server/pull/19)
+**AI Work:**
+- Implemented six more services:
+  - `VulnerabilityService` — CVE data, NVT search
+  - `NoteService` — annotations
+  - `OverrideService` — false positive management
+  - `TicketService` — remediation tracking
+  - `AssetService` — host/OS queries
+  - `ComplianceService` — policies and audits
+- Consolidated documentation into single status file
 
 ---
 
-## Implementation Summary
+## What We Built
 
-All 13 service domains from the original spec are implemented:
+**13 service domains**, each with:
+- Service class with business logic
+- Pydantic models for validation
+- MCP tools for AI agents
+- CLI commands for human operators
+- Unit tests
 
-| Service | Description | MCP Tools | CLI | Tests |
-|---------|-------------|-----------|-----|-------|
-| System | Version/status | ✅ | ✅ | ✅ |
-| Target | Scan targets | ✅ | ✅ | ✅ |
-| Task | Scan execution | ✅ | ✅ | ✅ |
-| Report | Results & export | ✅ | ✅ | ✅ |
-| Vulnerability | CVE/NVT data | ✅ | ✅ | ✅ |
-| Scan Config | Scan profiles | ✅ | ✅ | ✅ |
-| Port List | Port definitions | ✅ | ✅ | ✅ |
-| Schedule | Recurring scans | ✅ | ✅ | ✅ |
-| Note | Annotations | ✅ | ✅ | ✅ |
-| Override | False positives | ✅ | ✅ | ✅ |
-| Ticket | Remediation | ✅ | ✅ | ✅ |
-| Asset | Hosts/OS | ✅ | ✅ | ✅ |
-| Compliance | Policies/audits | ✅ | ✅ | ✅ |
+| Service | MCP Tools | CLI | Tests |
+|---------|-----------|-----|-------|
+| System | ✅ | ✅ | ✅ |
+| Target | ✅ | ✅ | ✅ |
+| Task/Scan | ✅ | ✅ | ✅ |
+| Report | ✅ | ✅ | ✅ |
+| Vulnerability | ✅ | ✅ | ✅ |
+| Scan Config | ✅ | ✅ | ✅ |
+| Port List | ✅ | ✅ | ✅ |
+| Schedule | ✅ | ✅ | ✅ |
+| Note | ✅ | ✅ | ✅ |
+| Override | ✅ | ✅ | ✅ |
+| Ticket | ✅ | ✅ | ✅ |
+| Asset | ✅ | ✅ | ✅ |
+| Compliance | ✅ | ✅ | ✅ |
+
+**CI/CD:** Ruff linting, Mypy strict typing, Pytest coverage, CalVer releases, Docker images to GHCR.
+
+---
+
+## What Worked Well
+
+### 1. Clear Spec Upfront
+The detailed issue with tool definitions, config schema, and test requirements gave the AI a clear target. Less ambiguity = better output.
+
+### 2. Phased Development
+Breaking the work into phases with clear boundaries (foundation → targets → scans → reports → utilities → extended) made progress visible and review manageable.
+
+### 3. Pattern Establishment
+Phase 2 (targets) established the pattern. Phases 3–6 followed it. The AI is good at replicating patterns consistently — this played to its strengths.
+
+### 4. Human Stays on Architecture
+The human made the architectural calls (simplify connection modes, remove idle timeout). The AI implemented. This division worked well.
+
+### 5. PR-Based Review
+Each phase went through PR review. The human could course-correct before code got merged. Standard development workflow, just with AI as the implementer.
+
+---
+
+## What Could Be Better
+
+### Integration Testing
+Unit tests are solid, but integration tests against a real GVM instance are still TODO. The AI can write mocks, but validating against real GMP responses needs a live environment.
+
+### Deep Domain Knowledge
+The AI knows the GMP protocol from docs, but a human with operational GVM experience would catch edge cases faster. The "deep review" phase exists for this reason.
 
 ---
 
 ## Remaining Work
 
-Deep review and hardening (per original spec):
-
-- [ ] Validate each service against real GMP responses from live gvmd
-- [ ] Verify each MCP tool contract with actual MCP client testing
-- [ ] CLI UX review — flag consistency, help text, error messages
-- [ ] Integration tests with Docker Compose GVM environment
-- [ ] Documentation polish — examples, troubleshooting, edge cases
+- [ ] Validate services against live GVM instance
+- [ ] Integration tests with Docker Compose environment
+- [ ] CLI UX polish (error messages, edge cases)
+- [ ] Documentation examples and troubleshooting
 
 ---
 
-## CI/CD
+## Takeaways for Developers
 
-- **Linting:** Ruff
-- **Typing:** Mypy (strict)
-- **Tests:** Pytest with coverage
-- **Releases:** CalVer tagging, manual dispatch
-- **Artifacts:** Docker images to GHCR, CLI wheel uploads
+1. **Write good specs.** The more detail you give upfront, the less back-and-forth later.
 
----
+2. **Establish patterns early.** Get one service working the way you want, then let the AI replicate it.
 
-## Related Repositories
+3. **Stay in control of architecture.** Let the AI implement, but make the structural decisions yourself.
 
-- **GitHub (this repo):** https://github.com/clawosiris/openvas-mcp-server
-- **Codeberg (original):** https://codeberg.org/llnvd/gvm-tools
+4. **Use standard workflows.** PRs, CI, code review — all work fine with AI as implementer.
+
+5. **Know what AI is bad at.** Deep domain expertise, integration testing against real systems, UX intuition — keep human eyes on these.
 
 ---
 
-## References
+## Links
 
-- [python-gvm](https://github.com/greenbone/python-gvm) — Official Greenbone Python library
-- [MCP Specification](https://modelcontextprotocol.io/) — Model Context Protocol
-- [GMP Protocol](https://docs.greenbone.net/API/GMP/gmp.html) — Greenbone Management Protocol
-- [Greenbone Documentation](https://greenbone.github.io/docs/)
+- **Repository:** https://github.com/clawosiris/openvas-mcp-server
+- **Original Spec:** https://codeberg.org/llnvd/gvm-tools/issues/1
+- **python-gvm:** https://github.com/greenbone/python-gvm
+- **MCP Specification:** https://modelcontextprotocol.io/
