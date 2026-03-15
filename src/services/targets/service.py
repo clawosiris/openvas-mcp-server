@@ -336,19 +336,10 @@ class TargetService:
                 return member
         return AliveTest.SCAN_CONFIG_DEFAULT
 
-    def _alive_test_to_gvm(self, alive_test: AliveTest) -> Any:
-        """Convert AliveTest enum to GVM AliveTest type."""
-        # python-gvm has its own AliveTest enum in requests module
-        from gvm.protocols.gmp.requests.v224 import AliveTest as GvmAliveTest
+    def _alive_test_to_gvm(self, alive_test: AliveTest) -> str:
+        """Convert AliveTest enum to GMP string value.
 
-        mapping = {
-            AliveTest.SCAN_CONFIG_DEFAULT: GvmAliveTest.SCAN_CONFIG_DEFAULT,
-            AliveTest.ICMP_PING: GvmAliveTest.ICMP_PING,
-            AliveTest.TCP_ACK_SERVICE_PING: GvmAliveTest.TCP_ACK_SERVICE_PING,
-            AliveTest.TCP_SYN_SERVICE_PING: GvmAliveTest.TCP_SYN_SERVICE_PING,
-            AliveTest.ICMP_AND_TCP_ACK_SERVICE_PING: GvmAliveTest.ICMP_AND_TCP_ACK_SERVICE_PING,
-            AliveTest.ICMP_AND_ARP_PING: GvmAliveTest.ICMP_AND_ARP_PING,
-            AliveTest.ARP_PING: GvmAliveTest.ARP_PING,
-            AliveTest.CONSIDER_ALIVE: GvmAliveTest.CONSIDER_ALIVE,
-        }
-        return mapping.get(alive_test, GvmAliveTest.SCAN_CONFIG_DEFAULT)
+        GMP accepts string values for alive_test directly, avoiding
+        version-specific enum imports (v224, v225, v226, v227).
+        """
+        return alive_test.value
