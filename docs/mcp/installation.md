@@ -7,21 +7,46 @@
 
 ## Setup
 
-### 1. Copy the Docker Compose Override
+### 1. Add the Docker Compose Override
 
-Copy the override file from this repository into your Greenbone Community Edition directory:
+Create a `docker-compose.override.yml` in your Greenbone Community Edition directory with the MCP service:
+
+```yaml
+services:
+  openvas-mcp:
+    image: ghcr.io/clawosiris/openvas-mcp-server:latest
+    restart: on-failure
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      GVM_STYLE: local
+      GVM_SOCKET_PATH: /run/gvmd/gvmd.sock
+      GVM_USERNAME: ${GVM_USERNAME:?Set GVM_USERNAME in .env}
+      GVM_PASSWORD: ${GVM_PASSWORD:?Set GVM_PASSWORD in .env}
+      GVM_TIMEOUT: "60"
+      FASTMCP_HOST: "0.0.0.0"
+      FASTMCP_PORT: "8000"
+    volumes:
+      - gvmd_socket_vol:/run/gvmd
+    depends_on:
+      gvmd:
+        condition: service_started
+```
+
+Or copy the full override file (includes both MCP and CLI services) from this repository:
 
 ```bash
 cp docker-compose.override.yml /path/to/greenbone-community-container/
 ```
 
-### 2. Set Credentials (Optional)
+### 2. Set Credentials
 
-If your GVM credentials differ from the default (`admin`/`admin`), create or edit a `.env` file in your Greenbone CE directory:
+Create a `.env` file in your Greenbone CE directory with your GVM credentials:
 
 ```env
-GVM_USERNAME=admin
-GVM_PASSWORD=your-password-here
+GVM_USERNAME=<your-username>
+GVM_PASSWORD=<your-password>
 ```
 
 ### 3. Start the MCP Server

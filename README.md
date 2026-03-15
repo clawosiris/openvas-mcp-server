@@ -21,9 +21,15 @@ git clone https://github.com/clawosiris/openvas-mcp-server.git
 
 # Copy the override file to your Greenbone CE directory
 cp openvas-mcp-server/docker-compose.override.yml /path/to/greenbone-community-container/
+cd /path/to/greenbone-community-container
+
+# Create .env with your GVM credentials
+cat > .env <<EOF
+GVM_USERNAME=<your-username>
+GVM_PASSWORD=<your-password>
+EOF
 
 # Start the services you need
-cd /path/to/greenbone-community-container
 docker compose up -d openvas-mcp              # MCP server only
 docker compose up -d openvas-cli              # CLI only
 docker compose up -d openvas-mcp openvas-cli  # Both
