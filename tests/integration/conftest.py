@@ -75,7 +75,9 @@ def mock_server_socket(tmp_path_factory: pytest.TempPathFactory) -> str:
             if proc.stderr is not None:
                 stderr = proc.stderr.read()
             if "Operation not permitted" in stderr:
-                pytest.skip(f"mock server cannot create a Unix socket in this environment: {stderr}")
+                pytest.skip(
+                    f"mock server cannot create a Unix socket in this environment: {stderr}"
+                )
             pytest.fail(f"gvm-mock-server failed to create socket. stderr: {stderr}")
 
         yield str(socket_path)
