@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Iterator
 from uuid import uuid4
 
@@ -113,10 +114,8 @@ def test_start_task(
         task = task_service.get(task_id)
         assert task.status in {TaskStatus.RUNNING, TaskStatus.REQUESTED, TaskStatus.DONE}
     finally:
-        try:
+        with contextlib.suppress(Exception):
             task_service.stop(task_id)
-        except Exception:
-            pass
         task_service.delete(task_id, ultimate=True)
 
 
