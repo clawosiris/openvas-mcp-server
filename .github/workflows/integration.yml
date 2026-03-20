@@ -27,7 +27,7 @@ jobs:
       - name: Get mock server version
         id: mock-version
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           VERSION="${{ github.event.inputs.mock_server_version }}"
           if [ "$VERSION" = "latest" ] || [ -z "$VERSION" ]; then
@@ -44,7 +44,7 @@ jobs:
 
       - name: Download gvm-mock-server
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh release download ${{ steps.mock-version.outputs.version }} \
             --repo $MOCK_SERVER_REPO \
