@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      mock_server_version:
+        description: 'Mock server version (tag or "nightly")'
+        required: false
+        default: 'latest'
+
+env:
+  MOCK_SERVER_REPO: clawosiris/rust-gvm
 
 jobs:
   integration:
@@ -16,33 +24,35 @@ jobs:
       - name: Checkout openvas-mcp-server
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Checkout rust-gvm (mock server)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: clawosiris/rust-gvm
-          path: rust-gvm
-
-      - name: Set up Rust
-        uses: dtolnay/rust-action@stable
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust-gvm/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust-gvm/**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build gvm-mock-server
+      - name: Get mock server version
+        id: mock-version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd rust-gvm
-          cargo build --release -p gvm-mock-server
-          echo "GVM_MOCK_SERVER_BIN=$PWD/target/release/gvm-mock-server" >> $GITHUB_ENV
+          VERSION="${{ github.event.inputs.mock_server_version }}"
+          if [ "$VERSION" = "latest" ] || [ -z "$VERSION" ]; then
+            # Get latest non-nightly release
+            VERSION=$(gh release list --repo $MOCK_SERVER_REPO --exclude-drafts --limit 20 \
+              | grep -v nightly | head -1 | awk '{print $3}')
+            # Fall back to nightly if no releases yet
+            if [ -z "$VERSION" ]; then
+              VERSION="nightly"
+            fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using mock server version: $VERSION"
+
+      - name: Download gvm-mock-server
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ steps.mock-version.outputs.version }} \
+            --repo $MOCK_SERVER_REPO \
+            --pattern 'gvm-mock-server-linux-amd64-musl.tar.gz'
+          tar -xzf gvm-mock-server-linux-amd64-musl.tar.gz
+          chmod +x gvm-mock-server
+          ./gvm-mock-server --version
+          echo "GVM_MOCK_SERVER_BIN=$PWD/gvm-mock-server" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
