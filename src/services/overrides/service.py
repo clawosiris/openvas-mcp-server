@@ -6,6 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from xml.etree.ElementTree import Element
 
+from gvm.errors import GvmResponseError
+
 from src.errors import ResourceNotFoundError
 from src.utils import attr, collect, response_ok, text, validate_filter, validate_uuid
 
@@ -35,7 +37,13 @@ class OverrideService:
         def operation(gmp: Any) -> Any:
             return gmp.get_override(override_id=override_id)
 
-        response: Element = self._client.execute(operation)
+        try:
+            response: Element = self._client.execute(operation)
+        except GvmResponseError as e:
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise ResourceNotFoundError("override", override_id) from e
+            raise
+
         if not response_ok(response):
             raise ResourceNotFoundError("override", override_id)
         elem = response.find("override")
@@ -72,10 +80,14 @@ class OverrideService:
 
     def _parse_override(self, elem: Element) -> Override:
         hosts = [h.text.strip() for h in elem.findall("hosts/host") if h.text]
+        nvt_oid = text(elem, "nvt/oid")
+        if not nvt_oid:
+            # Mock server may expose this as a flat element
+            nvt_oid = text(elem, "nvt_oid")
         return Override(
             id=attr(elem, "id"),
             text=text(elem, "text"),
-            nvt_oid=text(elem, "nvt/oid"),
+            nvt_oid=nvt_oid,
             hosts=hosts,
             severity=text(elem, "severity"),
         )

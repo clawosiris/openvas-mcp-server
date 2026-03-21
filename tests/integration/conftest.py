@@ -15,11 +15,19 @@ from xml.etree.ElementTree import Element
 import pytest
 
 from src.infrastructure import ConnectionStyle, GvmConfig, LocalClient
+from src.services.assets import AssetService
+from src.services.compliance import ComplianceService
 from src.services.notes import NoteService
+from src.services.overrides import OverrideService
+from src.services.port_lists import PortListService
+from src.services.reports import ReportService
 from src.services.scan_configs import ScanConfigService
+from src.services.schedules import ScheduleService
 from src.services.system import SystemService
 from src.services.targets import TargetService
 from src.services.tasks import TaskService
+from src.services.tickets import TicketService
+from src.services.vulns import VulnerabilityService
 
 MOCK_SERVER_BIN = Path(
     os.environ.get(
@@ -166,3 +174,114 @@ def scanner_id(gvm_client: LocalClient) -> str:
     if scanner_id is None:
         pytest.skip("mock server returned no scanners")
     return scanner_id
+
+
+# Additional service fixtures
+
+
+@pytest.fixture
+def override_service(gvm_client: LocalClient) -> OverrideService:
+    return OverrideService(gvm_client)
+
+
+@pytest.fixture
+def port_list_service(gvm_client: LocalClient) -> PortListService:
+    return PortListService(gvm_client)
+
+
+@pytest.fixture
+def schedule_service(gvm_client: LocalClient) -> ScheduleService:
+    return ScheduleService(gvm_client)
+
+
+@pytest.fixture
+def ticket_service(gvm_client: LocalClient) -> TicketService:
+    return TicketService(gvm_client)
+
+
+@pytest.fixture
+def report_service(gvm_client: LocalClient) -> ReportService:
+    return ReportService(gvm_client)
+
+
+@pytest.fixture
+def vuln_service(gvm_client: LocalClient) -> VulnerabilityService:
+    return VulnerabilityService(gvm_client)
+
+
+@pytest.fixture
+def asset_service(gvm_client: LocalClient) -> AssetService:
+    return AssetService(gvm_client)
+
+
+@pytest.fixture
+def compliance_service(gvm_client: LocalClient) -> ComplianceService:
+    return ComplianceService(gvm_client)
+
+
+# ID fixtures for resources that require existing data
+
+
+@pytest.fixture
+def port_list_id(gvm_client: LocalClient) -> str:
+    """Return a port list ID if the mock exposes one."""
+
+    def operation(gmp: Any) -> Any:
+        return gmp.get_port_lists()
+
+    port_list_id = _extract_first_id(gvm_client.execute(operation), "port_list")
+    if port_list_id is None:
+        pytest.skip("mock server returned no port lists")
+    return port_list_id
+
+
+@pytest.fixture
+def schedule_id(gvm_client: LocalClient) -> str:
+    """Return a schedule ID if the mock exposes one."""
+
+    def operation(gmp: Any) -> Any:
+        return gmp.get_schedules()
+
+    schedule_id = _extract_first_id(gvm_client.execute(operation), "schedule")
+    if schedule_id is None:
+        pytest.skip("mock server returned no schedules")
+    return schedule_id
+
+
+@pytest.fixture
+def report_id(gvm_client: LocalClient) -> str:
+    """Return a report ID if the mock exposes one."""
+
+    def operation(gmp: Any) -> Any:
+        return gmp.get_reports()
+
+    report_id = _extract_first_id(gvm_client.execute(operation), "report")
+    if report_id is None:
+        pytest.skip("mock server returned no reports")
+    return report_id
+
+
+@pytest.fixture
+def result_id(gvm_client: LocalClient) -> str:
+    """Return a result ID if the mock exposes one (for tickets)."""
+
+    def operation(gmp: Any) -> Any:
+        return gmp.get_results()
+
+    result_id = _extract_first_id(gvm_client.execute(operation), "result")
+    if result_id is None:
+        pytest.skip("mock server returned no results")
+    return result_id
+
+
+@pytest.fixture
+def audit_id(gvm_client: LocalClient) -> str:
+    """Return an audit ID if the mock exposes one."""
+
+    def operation(gmp: Any) -> Any:
+        return gmp.get_audits()
+
+    audit_id = _extract_first_id(gvm_client.execute(operation), "task")
+    if audit_id is None:
+        pytest.skip("mock server returned no audits")
+    return audit_id
