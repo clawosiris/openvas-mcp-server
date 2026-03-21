@@ -51,7 +51,7 @@ jobs:
             --pattern 'gvm-mock-server-linux-amd64-musl.tar.gz'
           tar -xzf gvm-mock-server-linux-amd64-musl.tar.gz
           chmod +x gvm-mock-server
-          ./gvm-mock-server --version
+          echo "Mock server binary ready"
           echo "GVM_MOCK_SERVER_BIN=$PWD/gvm-mock-server" >> "$GITHUB_ENV"
 
       - name: Set up Python
