@@ -7,6 +7,8 @@ import builtins
 from typing import TYPE_CHECKING, Any
 from xml.etree.ElementTree import Element
 
+from gvm.errors import GvmResponseError
+
 from src.errors import ResourceNotFoundError
 from src.utils import attr, collect, response_ok, text, validate_filter, validate_uuid
 
@@ -36,7 +38,13 @@ class NoteService:
         def operation(gmp: Any) -> Any:
             return gmp.get_note(note_id=note_id)
 
-        response: Element = self._client.execute(operation)
+        try:
+            response: Element = self._client.execute(operation)
+        except GvmResponseError as e:
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise ResourceNotFoundError("note", note_id) from e
+            raise
+
         if not response_ok(response):
             raise ResourceNotFoundError("note", note_id)
         elem = response.find("note")
@@ -78,10 +86,15 @@ class NoteService:
 
     def _parse_note(self, elem: Element) -> Note:
         hosts = [h.text.strip() for h in elem.findall("hosts/host") if h.text]
+        nvt_oid = text(elem, "nvt/oid")
+        if not nvt_oid:
+            # Mock server may expose this as a flat element
+            nvt_oid = text(elem, "nvt_oid")
+
         return Note(
             id=attr(elem, "id"),
             text=text(elem, "text"),
             hosts=hosts,
-            nvt_oid=text(elem, "nvt/oid"),
+            nvt_oid=nvt_oid,
             active=text(elem, "active", "1") in {"1", "true", "yes"},
         )

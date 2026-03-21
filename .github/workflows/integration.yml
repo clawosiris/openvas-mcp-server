@@ -1,0 +1,85 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mock_server_version:
+        description: 'Mock server version (tag or "nightly")'
+        required: false
+        default: 'latest'
+
+env:
+  MOCK_SERVER_REPO: clawosiris/rust-gvm
+
+jobs:
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout openvas-mcp-server
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Get mock server version
+        id: mock-version
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          VERSION="${{ github.event.inputs.mock_server_version }}"
+          if [ "$VERSION" = "latest" ] || [ -z "$VERSION" ]; then
+            # Get latest release tag (use tab delimiter for awk). This will
+            # typically be the nightly tag, which ensures integration tests
+            # track the latest mock-server behavior.
+            VERSION=$(gh release list --repo $MOCK_SERVER_REPO --exclude-drafts --limit 20 \
+              | head -1 | awk -F'\t' '{print $3}')
+            if [ -z "$VERSION" ]; then
+              VERSION="nightly"
+            fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using mock server version: $VERSION"
+
+      - name: Download gvm-mock-server
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release download ${{ steps.mock-version.outputs.version }} \
+            --repo $MOCK_SERVER_REPO \
+            --pattern 'gvm-mock-server-linux-amd64-musl.tar.gz'
+          tar -xzf gvm-mock-server-linux-amd64-musl.tar.gz
+          chmod +x gvm-mock-server
+          echo "Mock server binary ready"
+          echo "GVM_MOCK_SERVER_BIN=$PWD/gvm-mock-server" >> "$GITHUB_ENV"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@76e04a911780d5b312d89783f7b1cd627778900a # v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-3.12-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Run integration tests
+        run: |
+          poetry run pytest tests/integration -v --tb=short

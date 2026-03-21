@@ -103,6 +103,7 @@ addopts = [
 ]
 markers = [
     "unit: Unit tests (mocked, fast)",
+    "integration: Integration tests against the local gvm-mock-server",
     "e2e: End-to-end tests (requires live GVM)",
     "slow: Slow tests",
 ]

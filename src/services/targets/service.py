@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from xml.etree.ElementTree import Element
 
+from gvm.errors import GvmResponseError
+
 from src.errors import ResourceInUseError, ResourceNotFoundError
 from src.utils import (
     attr,
@@ -68,7 +70,12 @@ class TargetService:
         def operation(gmp: Any) -> Any:
             return gmp.get_target(target_id=target_id)
 
-        response: Element = self._client.execute(operation)
+        try:
+            response: Element = self._client.execute(operation)
+        except GvmResponseError as e:
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise ResourceNotFoundError("target", target_id) from e
+            raise
 
         if not response_ok(response):
             raise ResourceNotFoundError("target", target_id)
