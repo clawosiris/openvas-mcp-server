@@ -31,10 +31,11 @@ jobs:
         run: |
           VERSION="${{ github.event.inputs.mock_server_version }}"
           if [ "$VERSION" = "latest" ] || [ -z "$VERSION" ]; then
-            # Get latest non-nightly release (use tab delimiter for awk)
+            # Get latest release tag (use tab delimiter for awk). This will
+            # typically be the nightly tag, which ensures integration tests
+            # track the latest mock-server behavior.
             VERSION=$(gh release list --repo $MOCK_SERVER_REPO --exclude-drafts --limit 20 \
-              | grep -v nightly | head -1 | awk -F'\t' '{print $3}')
-            # Fall back to nightly if no releases yet
+              | head -1 | awk -F'\t' '{print $3}')
             if [ -z "$VERSION" ]; then
               VERSION="nightly"
             fi
