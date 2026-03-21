@@ -86,10 +86,15 @@ class NoteService:
 
     def _parse_note(self, elem: Element) -> Note:
         hosts = [h.text.strip() for h in elem.findall("hosts/host") if h.text]
+        nvt_oid = text(elem, "nvt/oid")
+        if not nvt_oid:
+            # Mock server may expose this as a flat element
+            nvt_oid = text(elem, "nvt_oid")
+
         return Note(
             id=attr(elem, "id"),
             text=text(elem, "text"),
             hosts=hosts,
-            nvt_oid=text(elem, "nvt/oid"),
+            nvt_oid=nvt_oid,
             active=text(elem, "active", "1") in {"1", "true", "yes"},
         )
