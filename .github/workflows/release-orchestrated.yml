@@ -24,24 +24,19 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    name: "Release v${{ inputs.version }}"
+  # ──────────────────────────────────────────────
+  # Step 1: Pin deps + version bump + tag + GH Release
+  # ──────────────────────────────────────────────
+  prepare:
+    name: "Prepare v${{ inputs.version }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-
-      - name: Set up Python and pontos
-        uses: greenbone/actions/setup-pontos@v3
-
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # Pin rust-gvm dependency on stable releases
       - name: Pin upstream dependencies
@@ -49,33 +44,35 @@ jobs:
           VERSION="${{ inputs.version }}"
           if [[ "$VERSION" != *"-"* ]]; then
             sed -i "s|branch = \"main\"|tag = \"v$VERSION\"|g" Cargo.toml
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
             git add Cargo.toml
             git commit -m "build(deps): pin rust-gvm to v$VERSION" || true
+            git push
           else
             echo "Pre-release: keeping branch = main"
           fi
-
-      - name: Create release with pontos
         env:
-          GITHUB_USER: ${{ vars.RELEASE_USER || 'clawosiris' }}
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          ARGS="--release-version ${{ inputs.version }}"
-          ARGS="$ARGS --versioning-scheme semver"
-          ARGS="$ARGS --project-types cargo"
-          ARGS="$ARGS --git-tag-prefix v"
-          ARGS="$ARGS --no-next-version"
 
-          if [[ "${{ inputs.version }}" == *"-"* ]]; then
-            ARGS="$ARGS --github-pre-release"
-          fi
-
-          pontos-release create $ARGS --repository ${{ github.repository }}
+      - name: Create release
+        uses: greenbone/actions/release@v3
+        with:
+          github-user: ${{ vars.RELEASE_USER || 'clawosiris' }}
+          github-user-mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
+          github-user-token: ${{ secrets.RELEASE_TOKEN }}
+          release-type: ${{ inputs.release-type }}
+          release-version: ${{ inputs.version }}
+          versioning-scheme: semver
+          project-types: cargo
+          next-version: "false"
 
       - name: Regenerate Cargo.lock
         run: |
           cargo generate-lockfile
           if ! git diff --quiet Cargo.lock 2>/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
             git add Cargo.lock
             git commit --amend --no-edit
             git push --force-with-lease
@@ -83,25 +80,30 @@ jobs:
             git tag -f "$TAG"
             git push origin "$TAG" --force
           fi
-
-      - name: Wait for release workflow
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="v${{ inputs.version }}"
-          echo "Tag $TAG created. Waiting for release.yml..."
-          sleep 15
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
-          for i in $(seq 1 60); do
-            RUN_ID=$(gh run list --workflow=release.yml --limit=10 --json databaseId,headBranch --jq ".[] | select(.headBranch==\"$TAG\") | .databaseId" 2>/dev/null | head -1 || true)
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found release workflow run: $RUN_ID"
-              gh run watch "$RUN_ID" --exit-status || exit 1
-              echo "✅ Release workflow completed"
-              exit 0
-            fi
-            echo "Waiting... ($i/60)"
-            sleep 15
-          done
-          echo "::error::Release workflow did not trigger within timeout"
-          exit 1
+  # ──────────────────────────────────────────────
+  # Step 2: Build + push container images (CLI + MCP)
+  # ──────────────────────────────────────────────
+  cli:
+    name: Release CLI
+    needs: prepare
+    uses: ./.github/workflows/release-cli.yml
+    with:
+      version: ${{ inputs.version }}
+      tag: v${{ inputs.version }}
+    permissions:
+      contents: write
+      packages: write
+
+  mcp:
+    name: Release MCP
+    needs: prepare
+    uses: ./.github/workflows/release-mcp.yml
+    with:
+      version: ${{ inputs.version }}
+      tag: v${{ inputs.version }}
+    permissions:
+      contents: write
+      packages: write
