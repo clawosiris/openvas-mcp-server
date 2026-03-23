@@ -1,5 +1,4 @@
 # Orchestrated Release — triggered by clawosiris/release-orchestrator
-# Do NOT trigger manually — use the orchestrator instead.
 
 name: Orchestrated Release
 
@@ -32,19 +31,13 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
-
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-
-      - name: Set up Python and pontos
-        uses: greenbone/actions/setup-pontos@v3
-
-      - name: Configure git
-        uses: greenbone/actions/set-github-user@v3
+      - uses: greenbone/actions/setup-pontos@v3
+      - uses: greenbone/actions/set-github-user@v3
         with:
           user: ${{ vars.RELEASE_USER || 'clawosiris' }}
           mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
           token: ${{ secrets.RELEASE_TOKEN }}
-
       - name: Pin upstream dependencies
         run: |
           VERSION="${{ inputs.version }}"
@@ -55,7 +48,6 @@ jobs:
           else
             echo "Pre-release: keeping branch = main"
           fi
-
       - name: Create release with pontos
         env:
           GITHUB_USER: ${{ vars.RELEASE_USER || 'clawosiris' }}
@@ -70,7 +62,6 @@ jobs:
             ARGS="$ARGS --github-pre-release"
           fi
           pontos-release create $ARGS --repository ${{ github.repository }}
-
       - name: Regenerate Cargo.lock
         run: |
           cargo generate-lockfile
@@ -104,3 +95,10 @@ jobs:
     permissions:
       contents: write
       packages: write
+
+  collect:
+    name: Release complete
+    needs: [cli, mcp]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "✅ All release artifacts published for v${{ inputs.version }}"
