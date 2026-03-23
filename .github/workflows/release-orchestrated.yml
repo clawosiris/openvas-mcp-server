@@ -1,5 +1,3 @@
-# Orchestrated Release — triggered by clawosiris/release-orchestrator
-
 name: Orchestrated Release
 
 on:
@@ -27,27 +25,19 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }}
-      - uses: greenbone/actions/setup-pontos@v3
-      - uses: greenbone/actions/set-github-user@v3
+          persist-credentials: false
+      - name: Create release
+        uses: greenbone/actions/release@v3
         with:
-          user: ${{ vars.RELEASE_USER || 'clawosiris' }}
-          mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
-          token: ${{ secrets.RELEASE_TOKEN }}
-      - name: Create release with pontos
-        env:
-          GITHUB_USER: ${{ vars.RELEASE_USER || 'clawosiris' }}
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          ARGS="--release-version ${{ inputs.version }}"
-          ARGS="$ARGS --versioning-scheme semver"
-          ARGS="$ARGS --project-types pyproject"
-          ARGS="$ARGS --git-tag-prefix v"
-          ARGS="$ARGS --no-next-version"
-          if [[ "${{ inputs.release-type }}" == "alpha" || "${{ inputs.release-type }}" == "beta" || "${{ inputs.release-type }}" == "release-candidate" ]]; then
-            ARGS="$ARGS --github-pre-release"
-          fi
-          pontos-release create $ARGS --repository ${{ github.repository }}
+          github-user: ${{ vars.RELEASE_USER || 'clawosiris' }}
+          github-user-mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
+          github-user-token: ${{ secrets.RELEASE_TOKEN }}
+          release-type: ${{ inputs.release-type }}
+          release-version: ${{ inputs.version }}
+          versioning-scheme: semver
+          project-types: pyproject
+          next-version: "false"
+          admin-bypass: "false"
 
   cli:
     name: Release CLI
