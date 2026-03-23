@@ -19,9 +19,6 @@ permissions:
   contents: write
   packages: write
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   prepare:
     name: "Prepare v${{ inputs.version }}"
@@ -31,23 +28,12 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
-      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - uses: greenbone/actions/setup-pontos@v3
       - uses: greenbone/actions/set-github-user@v3
         with:
           user: ${{ vars.RELEASE_USER || 'clawosiris' }}
           mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
           token: ${{ secrets.RELEASE_TOKEN }}
-      - name: Pin upstream dependencies
-        run: |
-          VERSION="${{ inputs.version }}"
-          if [[ "$VERSION" != *"-"* ]]; then
-            sed -i "s|branch = \"main\"|tag = \"v$VERSION\"|g" Cargo.toml
-            git add Cargo.toml
-            git commit -m "build(deps): pin rust-gvm to v$VERSION" || true
-          else
-            echo "Pre-release: keeping branch = main"
-          fi
       - name: Create release with pontos
         env:
           GITHUB_USER: ${{ vars.RELEASE_USER || 'clawosiris' }}
@@ -55,24 +41,13 @@ jobs:
         run: |
           ARGS="--release-version ${{ inputs.version }}"
           ARGS="$ARGS --versioning-scheme semver"
-          ARGS="$ARGS --project-types cargo"
+          ARGS="$ARGS --project-types pyproject"
           ARGS="$ARGS --git-tag-prefix v"
           ARGS="$ARGS --no-next-version"
           if [[ "${{ inputs.release-type }}" == "alpha" || "${{ inputs.release-type }}" == "beta" || "${{ inputs.release-type }}" == "release-candidate" ]]; then
             ARGS="$ARGS --github-pre-release"
           fi
           pontos-release create $ARGS --repository ${{ github.repository }}
-      - name: Regenerate Cargo.lock
-        run: |
-          cargo generate-lockfile
-          if ! git diff --quiet Cargo.lock 2>/dev/null; then
-            git add Cargo.lock
-            git commit --amend --no-edit
-            git push --force-with-lease
-            TAG="v${{ inputs.version }}"
-            git tag -f "$TAG"
-            git push origin "$TAG" --force
-          fi
 
   cli:
     name: Release CLI
