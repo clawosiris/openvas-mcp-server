@@ -38,6 +38,7 @@ jobs:
           project-types: pyproject
           next-version: "false"
           admin-bypass: "false"
+          update-project: "false"
 
   cli:
     name: Release CLI
