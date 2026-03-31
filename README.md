@@ -7,6 +7,11 @@ MCP server and CLI for Greenbone Vulnerability Management (GVM/OpenVAS).
 
 ---
 
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
+
 ## Quick Start
 
 ### Prerequisites
@@ -62,6 +67,11 @@ openvas system test
 
 ---
 
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
+
 ## Documentation
 
 ### CLI
@@ -81,6 +91,11 @@ openvas system test
 
 ---
 
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
+
 ## Features
 
 - **MCP Server**: AI agent integration via Model Context Protocol
@@ -92,12 +107,22 @@ openvas system test
 
 ---
 
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
+
 ## Requirements
 
 - Docker and Docker Compose
 - Greenbone Community Edition containers
 
 ---
+
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
 
 ## Configuration
 
@@ -116,6 +141,11 @@ openvas system test
 | `GVM_RETRY_MAX_ATTEMPTS` | `3` | Max retry attempts |
 
 ---
+
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
 
 ## Development
 
@@ -142,6 +172,11 @@ poetry run openvas-mcp
 ```
 
 ---
+
+> [!NOTE]
+> **Releases** are managed via the [release-orchestrator](https://github.com/clawosiris/release-orchestrator).
+> To create a nightly/alpha build, create an alpha release in the orchestrator.
+> See [RELEASING.md](./RELEASING.md) for details.
 
 ## License
 
