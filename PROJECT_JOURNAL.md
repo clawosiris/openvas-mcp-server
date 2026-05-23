@@ -240,6 +240,102 @@ The AI knows the GMP protocol from docs, but a human with operational GVM experi
 
 ---
 
+## Latest Update (2026-03-27)
+
+### What changed since the last journal entry
+
+Work since the March 20 journal update focused on making integration tests reliable in CI and hardening the automation supply chain.
+
+**Integration testing with mock GVM server:**
+- Added integration tests using `gvm-mock-server`
+- Added a dedicated CI workflow to run those tests
+- Switched from in-workflow builds to using pre-built mock-server release artifacts for faster, more predictable CI
+- Fixed test and fixture cleanup/details (`conftest.py` formatting and minor test code cleanup)
+
+**CI/security/release pipeline updates:**
+- Pinned third-party GitHub Actions to commit SHAs (supply-chain hardening)
+- Updated CI auth usage to rely on `RELEASE_TOKEN` for private-repo access in relevant steps
+- Continued release/workflow cleanup in open PRs (removing older standalone release workflows)
+
+**Notable bugfixes in the same window (already merged earlier in this phase):**
+- Fixed `alive_test` target handling by passing a string value instead of version-specific enum behavior
+- Improved GMP protocol version handling (`determine_supported_gmp()` path)
+- Reduced MCP token overhead by disabling structured content where it was unnecessarily expensive
+
+### Open issues and PR snapshot
+
+**Open issue:**
+- #39: _Architecture: use released gvm-mock-server artifacts (GHCR image) for integration tests_ — now partially/mostly addressed by recent CI integration-test work, but should be reconciled with final architecture choice and documented closure criteria.
+
+**Open PRs (as of this update):**
+- #48: remove old standalone release workflows
+- #47: add dated journal entry file (`journal/2026-03-23.md`)
+- Dependabot updates for CI actions and Python dependencies: #45, #44, #43, #38, #37, #11, #7
+
+### Decisions captured
+
+- Integration tests should use a reproducible mock-server path in CI rather than ad-hoc local build logic.
+- CI security posture should prefer pinned action SHAs.
+- Token usage/cost in MCP responses is an explicit optimization concern (structured output kept off where it does not add value).
+
+### Next steps
+
+- Merge and validate the release-workflow cleanup PR (#48), then confirm no regressions in tag/release paths.
+- Triage and batch Dependabot PRs (CI actions first, then Python deps), with compatibility checks for Typer/Ruff/Rich major/minor jumps.
+- Close or update issue #39 with explicit "done" criteria based on current mock-server integration approach.
+- Decide whether journaling is now canonical in `PROJECT_JOURNAL.md`, `journal/YYYY-MM-DD.md`, or both, and document that convention.
+- Run/expand integration coverage against realistic GMP response scenarios now that CI plumbing is in place.
+
+## Latest Update (2026-04-01)
+
+### What changed since the last journal entry
+
+One significant addition since the March 27 update:
+
+**Rust port specification (2026-03-31):**
+- Added comprehensive spec for porting the Python MCP server to Rust (`docs/rust-mcp-server-spec.md`)
+- 2,500+ line document covering:
+  - All 54 MCP tools mapped to `rust-gvm` commands (100% coverage)
+  - Full architecture diagrams comparing Python and Rust stacks
+  - 6-week implementation plan with phased milestones
+  - CI/CD, testing, and deployment guidance
+  - Migration guide for users moving from Python to Rust version
+- Motivation: type safety, async-first concurrency, single-binary distribution, compile-time error checking
+- Status: Draft, ready for team review
+
+### Open issues and PR snapshot
+
+**Open issue:**
+- #39: _Architecture: use released gvm-mock-server artifacts (GHCR image) for integration tests_ — still open, criteria to close should be documented
+
+**Open PRs (9 total):**
+- #49: bump codecov/codecov-action from 4.6.0 to 6.0.0 (new since last update)
+- #48: remove old standalone release workflows
+- #47: add dated journal entry file (`journal/2026-03-23.md`)
+- #45: bump actions/setup-python from 5.6.0 to 6.2.0
+- #44: bump docker/build-push-action from 5.4.0 to 7.0.0
+- #38: update rich from ^13.0 to ^14.3
+- #37: update ruff from ^0.4 to ^0.15
+- #11: update typer from ^0.12 to ^0.24
+- #7: bump python from 3.12-slim to 3.14-slim
+
+### Decisions captured
+
+- Rust port is the strategic direction for the MCP server — better type safety, async performance, and single-binary distribution
+- `rust-gvm` will replace `python-gvm` as the GMP backend
+- GMP versions below 22.4 will not be supported in the Rust version
+- Tool signatures will remain identical for backwards compatibility with existing MCP clients
+
+### Next steps
+
+- Team review of Rust port specification (docs/rust-mcp-server-spec.md)
+- Decide on go/no-go for Rust port and timeline
+- Continue triaging Dependabot PRs (CI actions first, then Python deps)
+- Merge workflow cleanup PR (#48) and journal PR (#47)
+- Close or update issue #39 with explicit completion criteria
+
+---
+
 ## Links
 
 - **Repository:** https://github.com/clawosiris/openvas-mcp-server
