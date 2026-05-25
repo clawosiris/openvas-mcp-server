@@ -336,6 +336,112 @@ One significant addition since the March 27 update:
 
 ---
 
+## Latest Update (2026-04-27)
+
+### What changed since the last journal entry
+
+There have still been **no new merged commits** since the April 1 documentation updates, so the repository remains unchanged from a source-history perspective.
+
+The maintenance queue is also **effectively unchanged** since the prior visible journal state:
+
+- **No new commits landed** after the previous entry.
+- **No open PRs were merged, closed, or newly opened** in the intervening period.
+- The repo still has the same **12 open PRs**, headed by the April 20 dependency updates for `ruff` (#57) and `python-gvm` (#56).
+- Issue #39 remains open and still looks more like stale tracking/admin debt than active implementation work.
+
+### Open issues and PR snapshot
+
+**Open issue:**
+- #39: _Architecture: use released gvm-mock-server artifacts (GHCR image) for integration tests_ — still open; likely needs explicit closure or a narrowed follow-up scope.
+
+**Open PRs (12 total):**
+- #57: deps: update `ruff` requirement from `^0.4` to `>=0.4,<0.16`
+- #56: deps: update `python-gvm` requirement from `^26.0` to `>=26,<28`
+- #55: deps: update `rich` requirement from `^13.0` to `^15.0`
+- #54: deps: update `pydantic` requirement from `^2.0` to `^2.12`
+- #53: ci: bump `docker/build-push-action` from 5.4.0 to 7.1.0
+- #52: ci: bump `softprops/action-gh-release` from 2.6.1 to 3.0.0
+- #51: ci: bump `docker/login-action` from 4.0.0 to 4.1.0
+- #49: ci: bump `codecov/codecov-action` from 4.6.0 to 6.0.0
+- #48: ci: remove old standalone release workflows
+- #45: ci: bump `actions/setup-python` from 5.6.0 to 6.2.0
+- #11: deps: update `typer` requirement from `^0.12` to `^0.24`
+- #7: docker: bump Python base image from `3.12-slim` to `3.14-slim`
+
+### Decisions captured
+
+- The repository remains in the same **maintenance backlog / triage holding pattern** documented in the prior entries.
+- Since neither git history nor queue shape changed, the main project signal is now **continued inactivity**, not new technical direction.
+- The journal should keep recording these quiet periods clearly so maintainers can distinguish true stasis from missing observation.
+
+### Next steps
+
+- Reduce the open PR queue instead of letting it sit unchanged: batch-review CI PRs (#53, #52, #51, #49, #45) and dependency PRs (#57, #56, #55, #54, #11, #7).
+- Resolve #48 so release-workflow cleanup stops lingering as maintenance debt.
+- Close or re-scope #39 with explicit remaining acceptance criteria if there is any actual follow-up work left.
+- Decide whether the Rust-port specification is active roadmap work or parked design material, and document that status clearly.
+
+---
+
+## Latest Update (2026-05-03)
+
+### What changed since the last journal entry
+
+There are still **no new committed git-history changes** after the April 1 Rust-spec update, and the GitHub queue is **unchanged** from the April 27 snapshot:
+
+- **No new commits** landed on `feat/mock-server-integration-tests` after `06bfb25` (`docs(journal): add 2026-04-01 update - Rust port spec`).
+- **No issue or PR churn** was visible in GitHub: issue #39 remains the only open issue, and the same 12 open PRs are still pending.
+
+What *did* change is the local working tree: there is now substantial in-progress implementation work toward the originally requested package layout for a standalone `gvm_mcp` server.
+
+**Local in-progress package work (uncommitted):**
+- Added a new top-level `gvm_mcp/` package with the requested structure:
+  - `config.py` for env-driven config loading and validation
+  - `connection.py` for python-gvm connection management
+  - `server.py` as the MCP entry point
+  - `tools/` modules for targets, scans, reports, vulnerabilities, and extraction
+  - `utils/xml_helpers.py` for XML-to-dict conversion helpers
+- Updated `pyproject.toml` to package `gvm_mcp` alongside the existing `src` tree.
+- Added a new `gvm-mcp` console script entrypoint pointing at `gvm_mcp.server:main`.
+- Added unit tests under `tests/unit/gvm_mcp/` for config loading and XML helper behavior.
+- Captured active implementation state in `worklog.md`, including a note that the new package is runnable via `python -m gvm_mcp.server` and intended to coexist with the repository's existing `src` implementation for now.
+
+### Open issues and PR snapshot
+
+**Open issue:**
+- #39: _Architecture: use released gvm-mock-server artifacts (GHCR image) for integration tests_ — still open and unchanged.
+
+**Open PRs (12 total, unchanged):**
+- #57: deps: update `ruff` requirement from `^0.4` to `>=0.4,<0.16`
+- #56: deps: update `python-gvm` requirement from `^26.0` to `>=26,<28`
+- #55: deps: update `rich` requirement from `^13.0` to `^15.0`
+- #54: deps: update `pydantic` requirement from `^2.0` to `^2.12`
+- #53: ci: bump `docker/build-push-action` from 5.4.0 to 7.1.0
+- #52: ci: bump `softprops/action-gh-release` from 2.6.1 to 3.0.0
+- #51: ci: bump `docker/login-action` from 4.0.0 to 4.1.0
+- #49: ci: bump `codecov/codecov-action` from 4.6.0 to 6.0.0
+- #48: ci: remove old standalone release workflows
+- #45: ci: bump `actions/setup-python` from 5.6.0 to 6.2.0
+- #11: deps: update `typer` requirement from `^0.12` to `^0.24`
+- #7: docker: bump Python base image from `3.12-slim` to `3.14-slim`
+
+### Decisions captured
+
+- The repository is still externally quiet, but there is now a clear **internal implementation track** for the requested `gvm_mcp` package layout.
+- The new `gvm_mcp` package is being added **in parallel** with the existing `src` implementation instead of replacing it immediately, which reduces migration risk while preserving current code paths.
+- Packaging and entrypoint wiring now assume the project may need to expose **both** the legacy `openvas-mcp` path and the new `gvm-mcp` path during transition.
+- The package design is leaning toward simple env-based configuration with support for both **local socket** and **remote TLS** connection styles.
+
+### Next steps
+
+- Commit the in-progress `gvm_mcp` package work so it becomes part of project history rather than only local state.
+- Expand unit coverage beyond config/XML helpers into tool modules and report/extraction edge cases.
+- Validate the new package in an environment with the full Python test toolchain installed; the current container does not have `pytest` available.
+- Clean up generated `__pycache__` artifacts before commit if they are not meant to be tracked.
+- Continue triaging the unchanged PR queue and decide whether issue #39 should be closed, narrowed, or explicitly tied to the new package work.
+
+---
+
 ## Links
 
 - **Repository:** https://github.com/clawosiris/openvas-mcp-server

@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Security",
     "Topic :: System :: Systems Administration",
 ]
-packages = [{ include = "src" }]
+packages = [{ include = "gvm_mcp" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -41,8 +41,8 @@ mypy = "^1.0"
 pre-commit = "^4.5"
 
 [tool.poetry.scripts]
-openvas = "src.presentation.cli.main:app"
-openvas-mcp = "src.presentation.mcp.server:main"
+openvas-mcp = "gvm_mcp.server:main"
+gvm-mcp = "gvm_mcp.server:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -52,7 +52,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src", "tests"]
+src = ["gvm_mcp", "tests"]
 
 [tool.ruff.lint]
 extend-safe-fixes = ["SIM105", "SIM102"]
@@ -73,7 +73,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["gvm_mcp"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001", "ARG002", "F841"]
@@ -110,7 +110,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["src"]
+source = ["gvm_mcp"]
 branch = true
 omit = ["*/tests/*", "*/__init__.py"]
 

@@ -112,11 +112,6 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction
       
-      - name: CLI smoke test
-        run: |
-          poetry run openvas --help
-          poetry run openvas version
-      
       - name: MCP server smoke test
         env:
           GVM_STYLE: local
@@ -124,16 +119,12 @@ jobs:
           GVM_USERNAME: test
           GVM_PASSWORD: test
         run: |
-          # Test that server module can be imported and toolsets register correctly
+          # Test that server module can be imported and server construction succeeds
           # Uses dummy config - we're testing import/registration, not actual connection
           poetry run python -c "
-          from mcp.server.fastmcp import FastMCP
-          from src.presentation.mcp.toolsets.assets import register_asset_tools
-          from src.presentation.mcp.toolsets.targets import register_target_tools
-          from src.presentation.mcp.toolsets.tasks import register_task_tools
-          from src.presentation.mcp.toolsets.reports import register_report_tools
-          from src.presentation.mcp.toolsets.vulns import register_vuln_tools
-          print('MCP toolsets import OK - no issubclass errors')
+          from gvm_mcp.server import create_server
+          server = create_server()
+          print(f'MCP server import OK: {server.name}')
           "
 
   security:
