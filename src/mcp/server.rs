@@ -1,106 +1,81 @@
-//! rmcp server wiring and the system toolset.
+//! rmcp server wiring: composes per-toolset routers according to the
+//! toolset selection and read-only mode.
 
 use std::sync::Arc;
 
 use rmcp::handler::server::ServerHandler;
-use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerInfo};
-use rmcp::{ErrorData as McpError, tool, tool_handler, tool_router};
-use serde::Serialize;
+use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
+use rmcp::tool_handler;
 
 use crate::config::Config;
 use crate::gateway::GatewayClient;
-use crate::gateway::models::{SessionInfo, VersionInfo};
-
-use super::error::gateway_tool_error;
-
-/// Structured payload returned by `openvas_test_connection`.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct TestConnectionReport {
-    gateway_url: String,
-    gateway_status: String,
-    api_version: String,
-    gmp_version: String,
-    session_user: String,
-    session_state: String,
-    session_expires_in: i64,
-    read_only: bool,
-    toolsets: String,
-}
+use crate::mcp::toolset::Toolset;
 
 #[derive(Clone)]
 pub struct GvmMcpServer {
     gateway: Arc<GatewayClient>,
     config: Arc<Config>,
+    tool_router: ToolRouter<Self>,
 }
 
-#[tool_router]
 impl GvmMcpServer {
     pub fn new(config: Config) -> anyhow::Result<Self> {
         let gateway = Arc::new(GatewayClient::new(&config)?);
+
+        let mut tool_router = ToolRouter::new();
+        for toolset in config.toolsets.iter() {
+            match toolset {
+                Toolset::System => tool_router += Self::system_router(),
+                Toolset::Targets => tool_router += Self::targets_router(),
+                Toolset::Tasks => tool_router += Self::tasks_router(),
+                // Remaining toolsets land in later phases.
+                _ => {}
+            }
+        }
+
+        if config.read_only {
+            tool_router.map.retain(|_, route| {
+                route
+                    .attr
+                    .annotations
+                    .as_ref()
+                    .and_then(|annotations| annotations.read_only_hint)
+                    .unwrap_or(false)
+            });
+        }
+
         Ok(Self {
             gateway,
             config: Arc::new(config),
+            tool_router,
         })
     }
 
-    /// Verify connectivity to the GVM stack: checks gateway liveness,
-    /// queries the gvmd version and performs an authenticated session
-    /// round-trip. Use this first if other tools fail.
-    #[tool(
-        name = "openvas_test_connection",
-        annotations(title = "Test GVM connection", read_only_hint = true)
-    )]
-    pub async fn test_connection(&self) -> Result<CallToolResult, McpError> {
-        let health = match self.gateway.health().await {
-            Ok(health) => health,
-            Err(err) => {
-                return Ok(gateway_tool_error(
-                    "checking gateway liveness (GET /health)",
-                    &err,
-                ));
-            }
-        };
+    pub(crate) fn gateway(&self) -> &GatewayClient {
+        &self.gateway
+    }
 
-        let version: VersionInfo = match self.gateway.version().await {
-            Ok(version) => version,
-            Err(err) => {
-                return Ok(gateway_tool_error(
-                    "querying gvmd version (GET /api/v1/version)",
-                    &err,
-                ));
-            }
-        };
+    pub(crate) fn config(&self) -> &Config {
+        &self.config
+    }
 
-        let session: SessionInfo = match self.gateway.session_info().await {
-            Ok(session) => session,
-            Err(err) => {
-                return Ok(gateway_tool_error(
-                    "authenticating a gateway session (POST/GET /api/v1/session)",
-                    &err,
-                ));
-            }
-        };
-
-        let report = TestConnectionReport {
-            gateway_url: self.config.gateway_url.to_string(),
-            gateway_status: health.status,
-            api_version: version.api_version,
-            gmp_version: version.gmp_version,
-            session_user: session.user,
-            session_state: session.state,
-            session_expires_in: session.expires_in,
-            read_only: self.config.read_only,
-            toolsets: self.config.toolsets.to_string(),
-        };
-
-        let text = serde_json::to_string_pretty(&report)
-            .map_err(|err| McpError::internal_error(err.to_string(), None))?;
-        Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
+    /// Names of the tools this instance exposes, sorted. Used by tests and
+    /// diagnostics; the MCP `list_tools` result is derived from the same
+    /// router.
+    pub fn tool_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .tool_router
+            .map
+            .keys()
+            .map(|name| name.to_string())
+            .collect();
+        names.sort();
+        names
     }
 }
 
-#[tool_handler]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for GvmMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
