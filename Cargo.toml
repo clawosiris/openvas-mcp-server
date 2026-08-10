@@ -1,0 +1,40 @@
+[package]
+name = "gvm-mcp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+description = "MCP server for Greenbone Vulnerability Management (GVM/OpenVAS) via the rust-gvm-api REST gateway"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/clawosiris/openvas-mcp-server"
+keywords = ["openvas", "gvm", "greenbone", "mcp", "vulnerability"]
+categories = ["command-line-utilities"]
+
+[lib]
+name = "gvm_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gvm-mcp"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive", "env"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rmcp = { version = "3.1.2", features = ["schemars", "server", "transport-io"] }
+schemars = "1.2.2"
+secrecy = "0.10.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "signal"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+url = "2.5.8"
+
+[dev-dependencies]
+wiremock = "0.6.5"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
