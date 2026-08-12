@@ -106,6 +106,19 @@ impl GatewayClient {
         Self::decode(url, response).await
     }
 
+    /// Authorized PUT under `/api/v1` with a JSON body, decoded as JSON.
+    pub async fn put_json<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        body: &impl serde::Serialize,
+    ) -> Result<T, GatewayError> {
+        let url = self.api_url(segments);
+        let response = self
+            .send_authorized(|http| http.put(url.clone()).json(body))
+            .await?;
+        Self::decode(url, response).await
+    }
+
     /// Authorized bodyless POST under `/api/v1`, decoded as JSON.
     pub async fn post_action<T: DeserializeOwned>(
         &self,
