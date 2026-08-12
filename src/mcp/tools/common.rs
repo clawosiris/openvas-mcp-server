@@ -69,6 +69,70 @@ pub fn json_result(value: &impl Serialize) -> Result<CallToolResult, McpError> {
     Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
+/// Copy only `keys` (that are present and non-null) out of a JSON object.
+/// Used to summarize gateway list rows: the key sets come from the gateway
+/// spec, the summaries keep tool output within an LLM's token budget.
+pub fn pick(value: &serde_json::Value, keys: &[&str]) -> serde_json::Value {
+    let mut out = serde_json::Map::new();
+    if let Some(object) = value.as_object() {
+        for key in keys {
+            if let Some(v) = object.get(*key)
+                && !v.is_null()
+            {
+                out.insert((*key).to_string(), v.clone());
+            }
+        }
+    }
+    serde_json::Value::Object(out)
+}
+
+/// Generic list tool body: fetch `{data, pagination}` from the gateway,
+/// summarize each row down to `keys`, and return `{<out_key>, pagination}`.
+pub async fn list_summarized(
+    gateway: &crate::gateway::GatewayClient,
+    resource: &str,
+    out_key: &str,
+    keys: &[&str],
+    params: &ListParams,
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    let value: serde_json::Value = match gateway
+        .get_json_query(&[resource], &params.to_query())
+        .await
+    {
+        Ok(value) => value,
+        Err(err) => return Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
+    };
+
+    let rows: Vec<serde_json::Value> = value["data"]
+        .as_array()
+        .map(|data| data.iter().map(|row| pick(row, keys)).collect())
+        .unwrap_or_default();
+
+    let mut out = serde_json::Map::new();
+    out.insert(out_key.to_string(), serde_json::Value::Array(rows));
+    if let Some(pagination) = value.get("pagination")
+        && !pagination.is_null()
+    {
+        out.insert("pagination".to_string(), pagination.clone());
+    }
+    json_result(&serde_json::Value::Object(out))
+}
+
+/// Generic get tool body: fetch one resource and pass the gateway's JSON
+/// through unchanged (the gateway spec is the contract; full detail is the
+/// point of a get tool).
+pub async fn get_passthrough(
+    gateway: &crate::gateway::GatewayClient,
+    segments: &[&str],
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    match gateway.get_json::<serde_json::Value>(segments).await {
+        Ok(value) => json_result(&value),
+        Err(err) => Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

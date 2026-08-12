@@ -29,8 +29,29 @@ impl GvmMcpServer {
                 Toolset::System => tool_router += Self::system_router(),
                 Toolset::Targets => tool_router += Self::targets_router(),
                 Toolset::Tasks => tool_router += Self::tasks_router(),
-                // Remaining toolsets land in later phases.
-                _ => {}
+                Toolset::ScanConfigs => tool_router += Self::scan_configs_router(),
+                Toolset::Scanners => tool_router += Self::scanners_router(),
+                Toolset::Schedules => tool_router += Self::schedules_router(),
+                Toolset::Credentials => tool_router += Self::credentials_router(),
+                Toolset::Alerts => tool_router += Self::alerts_router(),
+                Toolset::PortLists => tool_router += Self::port_lists_router(),
+                Toolset::Results => tool_router += Self::results_router(),
+                Toolset::Reports => tool_router += Self::reports_router(),
+                Toolset::Assets => tool_router += Self::assets_router(),
+                Toolset::ReportFormats => tool_router += Self::report_formats_router(),
+                Toolset::Filters => tool_router += Self::filters_router(),
+                Toolset::Tags => tool_router += Self::tags_router(),
+                Toolset::Notes => tool_router += Self::notes_router(),
+                Toolset::Overrides => tool_router += Self::overrides_router(),
+                Toolset::Nvts => tool_router += Self::nvts_router(),
+                Toolset::Feeds => tool_router += Self::feeds_router(),
+                Toolset::Tickets => tool_router += Self::tickets_router(),
+                // Vulnerabilities and standalone TLS certs have no gateway
+                // endpoint yet; compliance and identity land in later phases.
+                Toolset::Vulnerabilities
+                | Toolset::TlsCertificates
+                | Toolset::Compliance
+                | Toolset::Identity => {}
             }
         }
 

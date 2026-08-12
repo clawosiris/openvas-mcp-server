@@ -77,6 +77,20 @@ async fn toolset_selection_limits_exposure() {
 }
 
 #[tokio::test]
+async fn default_tool_count_matches_wired_toolsets() {
+    let server = MockServer::start().await;
+    let mcp = GvmMcpServer::new(config_with_args(&server, &[])).unwrap();
+    // 2 system + 2 targets + 7 tasks + 2*13 read pairs + 3 nvts + 1 feeds.
+    // A mismatch means a router was not wired into server.rs (or a tool was
+    // added without updating this inventory).
+    assert_eq!(mcp.tool_names().len(), 45, "got: {:?}", mcp.tool_names());
+
+    let read_only = GvmMcpServer::new(config_with_args(&server, &["--read-only"])).unwrap();
+    // Only the 5 task lifecycle writes disappear in read-only mode.
+    assert_eq!(read_only.tool_names().len(), 40);
+}
+
+#[tokio::test]
 async fn read_only_and_selection_compose() {
     let server = MockServer::start().await;
     let mcp = GvmMcpServer::new(config_with_args(

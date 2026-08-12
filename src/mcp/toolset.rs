@@ -33,6 +33,7 @@ pub enum Toolset {
     Nvts,
     Vulnerabilities,
     Feeds,
+    Tickets,
     Compliance,
     Identity,
 }
@@ -60,6 +61,7 @@ impl Toolset {
         Toolset::Nvts,
         Toolset::Vulnerabilities,
         Toolset::Feeds,
+        Toolset::Tickets,
         Toolset::Compliance,
         Toolset::Identity,
     ];
@@ -87,6 +89,7 @@ impl Toolset {
             Toolset::Nvts => "nvts",
             Toolset::Vulnerabilities => "vulnerabilities",
             Toolset::Feeds => "feeds",
+            Toolset::Tickets => "tickets",
             Toolset::Compliance => "compliance",
             Toolset::Identity => "identity",
         }
@@ -115,6 +118,7 @@ impl Toolset {
             Toolset::Nvts => "NVTs and NVT families",
             Toolset::Vulnerabilities => "Vulnerability listing",
             Toolset::Feeds => "Feed status",
+            Toolset::Tickets => "Remediation tickets",
             Toolset::Compliance => "Compliance audits and policies",
             Toolset::Identity => "Users, groups, roles, permissions (opt-in)",
         }
