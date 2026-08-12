@@ -2,6 +2,7 @@
 
 pub mod error;
 pub mod server;
+pub mod tools;
 pub mod toolset;
 
 pub use server::GvmMcpServer;

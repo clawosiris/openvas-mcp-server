@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use reqwest::{Method, StatusCode};
+use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use url::Url;
 
@@ -10,7 +10,7 @@ use crate::config::Config;
 
 use super::error::{GatewayError, error_from_response};
 use super::models::{HealthStatus, SessionInfo, VersionInfo};
-use super::session::{Session, SessionManager};
+use super::session::SessionManager;
 
 /// Path prefix of the versioned API surface. Liveness/readiness probes live
 /// at the unversioned root.
@@ -77,9 +77,64 @@ impl GatewayClient {
         &self,
         segments: &[&str],
     ) -> Result<T, GatewayError> {
+        self.get_json_query(segments, &[]).await
+    }
+
+    /// Authorized GET under `/api/v1` with query parameters, decoded as JSON.
+    pub async fn get_json_query<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        query: &[(&str, String)],
+    ) -> Result<T, GatewayError> {
         let url = self.api_url(segments);
-        let response = self.send_authorized(Method::GET, url.clone()).await?;
+        let response = self
+            .send_authorized(|http| http.get(url.clone()).query(query))
+            .await?;
         Self::decode(url, response).await
+    }
+
+    /// Authorized POST under `/api/v1` with a JSON body, decoded as JSON.
+    pub async fn post_json<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        body: &impl serde::Serialize,
+    ) -> Result<T, GatewayError> {
+        let url = self.api_url(segments);
+        let response = self
+            .send_authorized(|http| http.post(url.clone()).json(body))
+            .await?;
+        Self::decode(url, response).await
+    }
+
+    /// Authorized bodyless POST under `/api/v1`, decoded as JSON.
+    pub async fn post_action<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+    ) -> Result<T, GatewayError> {
+        let url = self.api_url(segments);
+        let response = self.send_authorized(|http| http.post(url.clone())).await?;
+        Self::decode(url, response).await
+    }
+
+    /// Authorized bodyless POST under `/api/v1` where the response body (if
+    /// any) carries no information (e.g. task stop).
+    pub async fn post_action_empty(&self, segments: &[&str]) -> Result<(), GatewayError> {
+        let url = self.api_url(segments);
+        let response = self.send_authorized(|http| http.post(url.clone())).await?;
+        Self::expect_success(response).await
+    }
+
+    /// Authorized DELETE under `/api/v1` (expects 204).
+    pub async fn delete(
+        &self,
+        segments: &[&str],
+        query: &[(&str, String)],
+    ) -> Result<(), GatewayError> {
+        let url = self.api_url(segments);
+        let response = self
+            .send_authorized(|http| http.delete(url.clone()).query(query))
+            .await?;
+        Self::expect_success(response).await
     }
 
     async fn get_unauthenticated<T: DeserializeOwned>(&self, url: Url) -> Result<T, GatewayError> {
@@ -89,26 +144,35 @@ impl GatewayClient {
 
     /// Send with the current session's bearer token; on 401, renew the
     /// session exactly once (single-flight across tasks) and retry once.
-    async fn send_authorized(
-        &self,
-        method: Method,
-        url: Url,
-    ) -> Result<reqwest::Response, GatewayError> {
+    /// `build` constructs the request minus authorization, so the retry can
+    /// attach the renewed token.
+    async fn send_authorized<F>(&self, build: F) -> Result<reqwest::Response, GatewayError>
+    where
+        F: Fn(&reqwest::Client) -> reqwest::RequestBuilder,
+    {
         let session = self.sessions.current().await?;
-        let response = self.request(&method, &url, &session).send().await?;
+        let response = build(&self.http)
+            .bearer_auth(session.bearer_token())
+            .send()
+            .await?;
         if response.status() != StatusCode::UNAUTHORIZED {
             return Ok(response);
         }
 
-        tracing::debug!(%url, "session rejected (401), renewing and retrying once");
+        tracing::debug!(url = %response.url(), "session rejected (401), renewing and retrying once");
         let renewed = self.sessions.renew(&session).await?;
-        Ok(self.request(&method, &url, &renewed).send().await?)
+        Ok(build(&self.http)
+            .bearer_auth(renewed.bearer_token())
+            .send()
+            .await?)
     }
 
-    fn request(&self, method: &Method, url: &Url, session: &Session) -> reqwest::RequestBuilder {
-        self.http
-            .request(method.clone(), url.clone())
-            .bearer_auth(session.bearer_token())
+    async fn expect_success(response: reqwest::Response) -> Result<(), GatewayError> {
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(error_from_response(response).await)
+        }
     }
 
     async fn decode<T: DeserializeOwned>(

@@ -1,4 +1,5 @@
 //! Shared helpers for mock-gateway integration tests.
+#![allow(dead_code)] // each test binary uses a different subset
 
 use clap::Parser;
 use gvm_mcp::config::{Cli, Config};
@@ -10,15 +11,24 @@ pub const PASSWORD: &str = "s3cret";
 
 /// Config pointing at a mock gateway.
 pub fn config_for(server: &MockServer) -> Config {
-    let cli = Cli::parse_from([
+    config_with_args(server, &[])
+}
+
+/// Config pointing at a mock gateway, with extra CLI flags
+/// (e.g. `&["--read-only"]` or `&["--toolsets", "tasks"]`).
+pub fn config_with_args(server: &MockServer, extra: &[&str]) -> Config {
+    let uri = server.uri();
+    let mut args = vec![
         "gvm-mcp",
         "--gateway-url",
-        &server.uri(),
+        &uri,
         "--username",
         USERNAME,
         "--password",
         PASSWORD,
-    ]);
+    ];
+    args.extend_from_slice(extra);
+    let cli = Cli::parse_from(args);
     Config::from_cli(cli).expect("test config must be valid")
 }
 
