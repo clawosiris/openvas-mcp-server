@@ -7,7 +7,9 @@ use rmcp::{ErrorData as McpError, tool, tool_router};
 
 use crate::mcp::server::GvmMcpServer;
 
-use super::common::{GetByIdParams, ListParams, get_passthrough, list_summarized};
+use super::common::{
+    DeleteParams, GetByIdParams, ListParams, delete_resource, get_passthrough, list_summarized,
+};
 
 const ROW_KEYS: &[&str] = &[
     "id",
@@ -56,5 +58,22 @@ impl GvmMcpServer {
             "fetching the report",
         )
         .await
+    }
+
+    /// Delete a scan report (to the trashcan by default; `ultimate` deletes
+    /// permanently). The task itself is not affected.
+    #[tool(
+        name = "openvas_delete_report",
+        annotations(
+            title = "Delete report",
+            read_only_hint = false,
+            destructive_hint = true
+        )
+    )]
+    pub async fn delete_report(
+        &self,
+        Parameters(params): Parameters<DeleteParams>,
+    ) -> Result<CallToolResult, McpError> {
+        delete_resource(self.gateway(), "reports", &params, "deleting the report").await
     }
 }
