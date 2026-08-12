@@ -69,6 +69,83 @@ pub fn json_result(value: &impl Serialize) -> Result<CallToolResult, McpError> {
     Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
+/// Builder for gateway JSON request bodies. Tool arguments are snake_case
+/// (Python-parity MCP surface); gateway bodies are camelCase — every `set*`
+/// call names the gateway key explicitly, and unset optionals are omitted
+/// entirely so the gateway's "absent means unchanged" semantics hold.
+#[derive(Debug, Default)]
+pub struct Body(serde_json::Map<String, serde_json::Value>);
+
+impl Body {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set(mut self, key: &str, value: impl Into<serde_json::Value>) -> Self {
+        self.0.insert(key.to_string(), value.into());
+        self
+    }
+
+    pub fn set_opt(self, key: &str, value: Option<impl Into<serde_json::Value>>) -> Self {
+        match value {
+            Some(value) => self.set(key, value),
+            None => self,
+        }
+    }
+
+    pub fn into_value(self) -> serde_json::Value {
+        serde_json::Value::Object(self.0)
+    }
+}
+
+/// Generic create tool body: POST and return the gateway's `{id}` envelope.
+pub async fn create_resource(
+    gateway: &crate::gateway::GatewayClient,
+    resource: &str,
+    body: Body,
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    match gateway
+        .post_json::<serde_json::Value>(&[resource], &body.into_value())
+        .await
+    {
+        Ok(created) => json_result(&created),
+        Err(err) => Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
+    }
+}
+
+/// Generic update tool body: PUT and pass the updated resource through.
+pub async fn update_resource(
+    gateway: &crate::gateway::GatewayClient,
+    segments: &[&str],
+    body: Body,
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    match gateway
+        .put_json::<serde_json::Value>(segments, &body.into_value())
+        .await
+    {
+        Ok(updated) => json_result(&updated),
+        Err(err) => Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
+    }
+}
+
+/// Generic delete tool body (204 expected; `ultimate` skips the trashcan).
+pub async fn delete_resource(
+    gateway: &crate::gateway::GatewayClient,
+    resource: &str,
+    params: &DeleteParams,
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    match gateway
+        .delete(&[resource, &params.id], &params.to_query())
+        .await
+    {
+        Ok(()) => json_result(&serde_json::json!({ "deleted": true, "id": params.id })),
+        Err(err) => Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
+    }
+}
+
 /// Copy only `keys` (that are present and non-null) out of a JSON object.
 /// Used to summarize gateway list rows: the key sets come from the gateway
 /// spec, the summaries keep tool output within an LLM's token budget.

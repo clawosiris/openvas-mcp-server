@@ -9,7 +9,7 @@ use crate::gateway::models::{CreateTask, Pagination, ResourceCreated, Task, Task
 use crate::mcp::error::gateway_tool_error;
 use crate::mcp::server::GvmMcpServer;
 
-use super::common::{DeleteParams, GetByIdParams, ListParams, json_result};
+use super::common::{Body, DeleteParams, GetByIdParams, ListParams, json_result, update_resource};
 
 /// Summarized list row: compact on purpose (LLM token budget). Full details
 /// come from `openvas_get_task`.
@@ -231,4 +231,53 @@ impl GvmMcpServer {
             Err(err) => Ok(gateway_tool_error("deleting the task", &err)),
         }
     }
+
+    /// Update a scan task's bindings or metadata. Idempotent (PUT): omitted
+    /// fields stay unchanged; fails with 409 while the task is running.
+    #[tool(
+        name = "openvas_update_task",
+        annotations(title = "Update task", read_only_hint = false, destructive_hint = true)
+    )]
+    pub async fn update_task(
+        &self,
+        Parameters(params): Parameters<UpdateTaskParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let body = Body::new()
+            .set_opt("name", params.name)
+            .set_opt("comment", params.comment)
+            .set_opt("targetId", params.target_id)
+            .set_opt("scanConfigId", params.scan_config_id)
+            .set_opt("scannerId", params.scanner_id)
+            .set_opt("scheduleId", params.schedule_id)
+            .set_opt("alertIds", params.alert_ids)
+            .set_opt("schedulePeriods", params.schedule_periods);
+        update_resource(
+            self.gateway(),
+            &["tasks", &params.id],
+            body,
+            "updating the task",
+        )
+        .await
+    }
+}
+
+/// Arguments for `openvas_update_task`: all fields optional, omitted fields
+/// stay unchanged.
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct UpdateTaskParams {
+    /// UUID of the task to update
+    pub id: String,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+    /// Replacement target UUID
+    pub target_id: Option<String>,
+    /// Replacement scan config UUID
+    pub scan_config_id: Option<String>,
+    /// Replacement scanner UUID
+    pub scanner_id: Option<String>,
+    /// Replacement schedule UUID
+    pub schedule_id: Option<String>,
+    /// Replacement alert UUIDs
+    pub alert_ids: Option<Vec<String>>,
+    pub schedule_periods: Option<i32>,
 }
