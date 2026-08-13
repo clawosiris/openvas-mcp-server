@@ -64,6 +64,13 @@ Instead, use **GitHub Private Vulnerability Reporting**:
 - Credentials wrapped in `secrecy::SecretString`; redacted from `Debug` output and never returned in tool responses
 - SBOM (CycloneDX) generated and attached to every release
 
+### Authentication
+
+- gvm-mcp holds no session and invents no auth of its own: it forwards a caller's gvmd identity to the rust-gvm-api gateway per request, and gvmd is the sole authority.
+- **streamable HTTP**: the inbound `Authorization` header (a gateway session token or `Basic` gvmd credentials) is forwarded verbatim, so each caller authenticates as themselves and gvmd enforces their permissions. When absent, a fallback `Basic` credential (`GVM_USERNAME`/`GVM_PASSWORD`) is used; when neither is present the gateway answers `401`.
+- **stdio** has no network surface; it uses the configured fallback identity.
+- `MCP_ALLOWED_HOSTS` is a DNS-rebinding guard, not authentication. Terminate TLS and, if a single shared identity is desired, authenticate at a reverse proxy before exposing the HTTP endpoint beyond a trusted network. No credential is cached as a session.
+
 ## Changelog
 
 | Date | Change |

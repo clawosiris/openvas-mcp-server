@@ -3,9 +3,10 @@
 ## First contact
 
 Ask the model to run `openvas_test_connection`. It verifies, in order:
-gateway liveness (`GET /health`), the gvmd/GMP version, and an
-authenticated session round-trip. Each failure mode produces a distinct,
-actionable message (gateway down vs. bad credentials vs. gvmd unreachable).
+gateway liveness (`GET /health`), the gvmd/GMP version, and one authenticated
+call confirming the forwarded identity is accepted. Each failure mode produces
+a distinct, actionable message (gateway down vs. bad credentials vs. gvmd
+unreachable).
 
 ## Toolsets and gating
 
