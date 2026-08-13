@@ -135,6 +135,31 @@ async fn schedules_list_summarizes() {
 }
 
 #[tokio::test]
+async fn credential_stores_list_summarizes() {
+    let (server, mcp) = server_with_login().await;
+    Mock::given(method("GET"))
+        .and(path("/api/v1/credential-stores"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [{
+                "id": "default", "name": "gvmd", "provider": "gvmd",
+                "default": true, "writable": true
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    let result = mcp
+        .list_credential_stores(Parameters(ListParams::default()))
+        .await
+        .unwrap();
+    let json = json_of(&result);
+    assert_eq!(json["credentialStores"][0]["provider"], "gvmd");
+    assert_eq!(json["credentialStores"][0]["default"], true);
+    // CredentialStoreList has no pagination envelope per the spec.
+    assert!(json.get("pagination").is_none());
+}
+
+#[tokio::test]
 async fn credentials_list_summarizes() {
     let (server, mcp) = server_with_login().await;
     mount_list(

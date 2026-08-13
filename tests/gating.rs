@@ -84,11 +84,12 @@ async fn default_tool_count_matches_wired_toolsets() {
     // targets/scan-configs/schedules/credentials/alerts/port-lists/notes/
     // overrides + delete_report). A mismatch means a router was not wired
     // into server.rs (or a tool was added without updating this inventory).
-    assert_eq!(mcp.tool_names().len(), 71, "got: {:?}", mcp.tool_names());
+    assert_eq!(mcp.tool_names().len(), 81, "got: {:?}", mcp.tool_names());
 
     let read_only = GvmMcpServer::new(config_with_args(&server, &["--read-only"])).unwrap();
-    // Every mutating tool disappears in read-only mode.
-    assert_eq!(read_only.tool_names().len(), 40);
+    // Every mutating tool disappears in read-only mode (report drill-down,
+    // export and download stay: they mutate nothing durable).
+    assert_eq!(read_only.tool_names().len(), 49);
     assert!(
         !read_only
             .tool_names()
@@ -97,6 +98,58 @@ async fn default_tool_count_matches_wired_toolsets() {
                 || name.contains("update")
                 || name.contains("delete")),
         "read-only must hide all mutating tools"
+    );
+}
+
+#[tokio::test]
+async fn identity_toolset_is_opt_in() {
+    let server = MockServer::start().await;
+
+    let default = GvmMcpServer::new(config_with_args(&server, &[])).unwrap();
+    assert!(
+        !default
+            .tool_names()
+            .iter()
+            .any(|name| name.contains("user")),
+        "identity tools must be absent by default"
+    );
+
+    let with_identity = GvmMcpServer::new(config_with_args(
+        &server,
+        &["--toolsets", "default,identity"],
+    ))
+    .unwrap();
+    let names = with_identity.tool_names();
+    // 81 default + 23 identity (5 users + 5 groups + 5 roles +
+    // 5 permissions + 3 user-settings).
+    assert_eq!(names.len(), 104, "got: {names:?}");
+    for expected in [
+        "openvas_list_users",
+        "openvas_create_user",
+        "openvas_list_groups",
+        "openvas_delete_role",
+        "openvas_create_permission",
+        "openvas_update_user_setting",
+    ] {
+        assert!(names.contains(&expected.to_string()), "missing {expected}");
+    }
+
+    // Identity + read-only: default reads (49) plus the 10 identity reads.
+    let read_only = GvmMcpServer::new(config_with_args(
+        &server,
+        &["--toolsets", "default,identity", "--read-only"],
+    ))
+    .unwrap();
+    assert_eq!(read_only.tool_names().len(), 59);
+    assert!(
+        read_only
+            .tool_names()
+            .contains(&"openvas_list_users".to_string())
+    );
+    assert!(
+        !read_only
+            .tool_names()
+            .contains(&"openvas_create_user".to_string())
     );
 }
 

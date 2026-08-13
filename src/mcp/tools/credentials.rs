@@ -14,6 +14,7 @@ use super::common::{
 };
 
 const ROW_KEYS: &[&str] = &["id", "name", "type", "login", "inUse"];
+const STORE_ROW_KEYS: &[&str] = &["id", "name", "provider", "default", "writable"];
 
 #[tool_router(router = credentials_router, vis = "pub(crate)")]
 impl GvmMcpServer {
@@ -34,6 +35,27 @@ impl GvmMcpServer {
             ROW_KEYS,
             &params,
             "listing credentials",
+        )
+        .await
+    }
+
+    /// List available credential stores (backends that credentials can be
+    /// created in). Useful before creating a credential.
+    #[tool(
+        name = "openvas_list_credential_stores",
+        annotations(title = "List credential stores", read_only_hint = true)
+    )]
+    pub async fn list_credential_stores(
+        &self,
+        Parameters(params): Parameters<ListParams>,
+    ) -> Result<CallToolResult, McpError> {
+        list_summarized(
+            self.gateway(),
+            "credential-stores",
+            "credentialStores",
+            STORE_ROW_KEYS,
+            &params,
+            "listing credential stores",
         )
         .await
     }

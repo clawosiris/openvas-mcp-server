@@ -46,12 +46,10 @@ impl GvmMcpServer {
                 Toolset::Nvts => tool_router += Self::nvts_router(),
                 Toolset::Feeds => tool_router += Self::feeds_router(),
                 Toolset::Tickets => tool_router += Self::tickets_router(),
+                Toolset::Identity => tool_router += Self::identity_router(),
                 // Vulnerabilities and standalone TLS certs have no gateway
-                // endpoint yet; compliance and identity land in later phases.
-                Toolset::Vulnerabilities
-                | Toolset::TlsCertificates
-                | Toolset::Compliance
-                | Toolset::Identity => {}
+                // endpoint yet; compliance waits on the gateway's audits API.
+                Toolset::Vulnerabilities | Toolset::TlsCertificates | Toolset::Compliance => {}
             }
         }
 

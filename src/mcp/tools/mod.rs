@@ -8,6 +8,7 @@ pub mod common;
 pub mod credentials;
 pub mod feeds;
 pub mod filters;
+pub mod identity;
 pub mod notes;
 pub mod nvts;
 pub mod overrides;
