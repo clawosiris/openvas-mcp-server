@@ -102,6 +102,58 @@ async fn default_tool_count_matches_wired_toolsets() {
 }
 
 #[tokio::test]
+async fn identity_toolset_is_opt_in() {
+    let server = MockServer::start().await;
+
+    let default = GvmMcpServer::new(config_with_args(&server, &[])).unwrap();
+    assert!(
+        !default
+            .tool_names()
+            .iter()
+            .any(|name| name.contains("user")),
+        "identity tools must be absent by default"
+    );
+
+    let with_identity = GvmMcpServer::new(config_with_args(
+        &server,
+        &["--toolsets", "default,identity"],
+    ))
+    .unwrap();
+    let names = with_identity.tool_names();
+    // 80 default + 23 identity (5 users + 5 groups + 5 roles +
+    // 5 permissions + 3 user-settings).
+    assert_eq!(names.len(), 103, "got: {names:?}");
+    for expected in [
+        "openvas_list_users",
+        "openvas_create_user",
+        "openvas_list_groups",
+        "openvas_delete_role",
+        "openvas_create_permission",
+        "openvas_update_user_setting",
+    ] {
+        assert!(names.contains(&expected.to_string()), "missing {expected}");
+    }
+
+    // Identity + read-only: only the 10 identity reads remain visible.
+    let read_only = GvmMcpServer::new(config_with_args(
+        &server,
+        &["--toolsets", "default,identity", "--read-only"],
+    ))
+    .unwrap();
+    assert_eq!(read_only.tool_names().len(), 58);
+    assert!(
+        read_only
+            .tool_names()
+            .contains(&"openvas_list_users".to_string())
+    );
+    assert!(
+        !read_only
+            .tool_names()
+            .contains(&"openvas_create_user".to_string())
+    );
+}
+
+#[tokio::test]
 async fn read_only_and_selection_compose() {
     let server = MockServer::start().await;
     let mcp = GvmMcpServer::new(config_with_args(
