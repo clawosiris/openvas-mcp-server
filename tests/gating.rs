@@ -84,12 +84,12 @@ async fn default_tool_count_matches_wired_toolsets() {
     // targets/scan-configs/schedules/credentials/alerts/port-lists/notes/
     // overrides + delete_report). A mismatch means a router was not wired
     // into server.rs (or a tool was added without updating this inventory).
-    assert_eq!(mcp.tool_names().len(), 80, "got: {:?}", mcp.tool_names());
+    assert_eq!(mcp.tool_names().len(), 81, "got: {:?}", mcp.tool_names());
 
     let read_only = GvmMcpServer::new(config_with_args(&server, &["--read-only"])).unwrap();
     // Every mutating tool disappears in read-only mode (report drill-down,
     // export and download stay: they mutate nothing durable).
-    assert_eq!(read_only.tool_names().len(), 48);
+    assert_eq!(read_only.tool_names().len(), 49);
     assert!(
         !read_only
             .tool_names()
@@ -120,9 +120,9 @@ async fn identity_toolset_is_opt_in() {
     ))
     .unwrap();
     let names = with_identity.tool_names();
-    // 80 default + 23 identity (5 users + 5 groups + 5 roles +
+    // 81 default + 23 identity (5 users + 5 groups + 5 roles +
     // 5 permissions + 3 user-settings).
-    assert_eq!(names.len(), 103, "got: {names:?}");
+    assert_eq!(names.len(), 104, "got: {names:?}");
     for expected in [
         "openvas_list_users",
         "openvas_create_user",
@@ -134,13 +134,13 @@ async fn identity_toolset_is_opt_in() {
         assert!(names.contains(&expected.to_string()), "missing {expected}");
     }
 
-    // Identity + read-only: only the 10 identity reads remain visible.
+    // Identity + read-only: default reads (49) plus the 10 identity reads.
     let read_only = GvmMcpServer::new(config_with_args(
         &server,
         &["--toolsets", "default,identity", "--read-only"],
     ))
     .unwrap();
-    assert_eq!(read_only.tool_names().len(), 58);
+    assert_eq!(read_only.tool_names().len(), 59);
     assert!(
         read_only
             .tool_names()

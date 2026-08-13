@@ -88,7 +88,7 @@ server uses to create short-lived gateway sessions (renewed automatically).
 
 ## Toolsets
 
-The full surface is 103 tools — far too many to hand an LLM by default, so
+The full surface is 104 tools — far too many to hand an LLM by default, so
 tools are grouped into toolsets (`gvm-mcp --list-toolsets` prints them all).
 The default selection is every toolset except `identity`; add it explicitly
 with `--toolsets default,identity`. `--read-only` additionally strips every
@@ -96,9 +96,9 @@ mutating tool from the listing.
 
 | Selection | Tools |
 | --------- | ----- |
-| default | 80 |
-| default, read-only | 48 |
-| default + identity | 103 |
+| default | 81 |
+| default, read-only | 49 |
+| default + identity | 104 |
 
 Highlights:
 
