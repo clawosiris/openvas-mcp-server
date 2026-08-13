@@ -4,7 +4,7 @@ use rmcp::model::{CallToolResult, ContentBlock};
 use rmcp::{ErrorData as McpError, tool, tool_router};
 use serde::Serialize;
 
-use crate::gateway::models::{SessionInfo, VersionInfo};
+use crate::gateway::models::VersionInfo;
 use crate::mcp::error::gateway_tool_error;
 use crate::mcp::server::GvmMcpServer;
 
@@ -18,18 +18,17 @@ struct TestConnectionReport {
     gateway_status: String,
     api_version: String,
     gmp_version: String,
-    session_user: String,
-    session_state: String,
-    session_expires_in: i64,
+    /// Whether the identity used for this call is accepted by the gateway.
+    authenticated: bool,
     read_only: bool,
     toolsets: String,
 }
 
 #[tool_router(router = system_router, vis = "pub(crate)")]
 impl GvmMcpServer {
-    /// Verify connectivity to the GVM stack: checks gateway liveness,
-    /// queries the gvmd version and performs an authenticated session
-    /// round-trip. Use this first if other tools fail.
+    /// Verify connectivity to the GVM stack: checks gateway liveness, queries
+    /// the gvmd version and makes one authenticated call to confirm the
+    /// forwarded identity is accepted. Use this first if other tools fail.
     #[tool(
         name = "openvas_test_connection",
         annotations(title = "Test GVM connection", read_only_hint = true)
@@ -55,24 +54,26 @@ impl GvmMcpServer {
             }
         };
 
-        let session: SessionInfo = match self.gateway().session_info().await {
-            Ok(session) => session,
-            Err(err) => {
-                return Ok(gateway_tool_error(
-                    "authenticating a gateway session (POST/GET /api/v1/session)",
-                    &err,
-                ));
-            }
-        };
+        // One authenticated call verifies the identity the gateway will use
+        // for real tool calls (the caller's forwarded credentials, or the
+        // configured fallback). A 401 here surfaces as "authentication failed".
+        if let Err(err) = self
+            .gateway()
+            .get_json_query::<serde_json::Value>(&["targets"], &[("perPage", "1".to_string())])
+            .await
+        {
+            return Ok(gateway_tool_error(
+                "verifying gateway credentials (GET /api/v1/targets)",
+                &err,
+            ));
+        }
 
         let report = TestConnectionReport {
             gateway_url: self.config().gateway_url.to_string(),
             gateway_status: health.status,
             api_version: version.api_version,
             gmp_version: version.gmp_version,
-            session_user: session.user,
-            session_state: session.state,
-            session_expires_in: session.expires_in,
+            authenticated: true,
             read_only: self.config().read_only,
             toolsets: self.config().toolsets.to_string(),
         };

@@ -1,16 +1,19 @@
-//! Gateway HTTP client: request plumbing, bearer injection, 401 retry.
+//! Gateway HTTP client: request plumbing and per-request identity forwarding.
+//!
+//! The client holds no session. Every authorized request carries an
+//! `Authorization` resolved per call by [`super::auth`]: the inbound caller's
+//! header when present, otherwise a `Basic` header built from configured
+//! gvmd credentials. The gateway (backed by gvmd) authorizes each request.
 
-use std::sync::Arc;
-
-use reqwest::StatusCode;
+use reqwest::header::AUTHORIZATION;
 use serde::de::DeserializeOwned;
 use url::Url;
 
 use crate::config::Config;
 
+use super::auth::{basic_auth, current_authorization};
 use super::error::{GatewayError, error_from_response};
-use super::models::{HealthStatus, SessionInfo, VersionInfo};
-use super::session::SessionManager;
+use super::models::{HealthStatus, VersionInfo};
 
 /// Path prefix of the versioned API surface. Liveness/readiness probes live
 /// at the unversioned root.
@@ -20,7 +23,10 @@ const API_PREFIX: [&str; 2] = ["api", "v1"];
 pub struct GatewayClient {
     http: reqwest::Client,
     base_url: Url,
-    sessions: Arc<SessionManager>,
+    /// `Authorization` used when the caller forwards none (stdio, or an HTTP
+    /// caller that sent no credentials). Built once from configured gvmd
+    /// credentials; `None` when none are configured.
+    fallback_auth: Option<String>,
 }
 
 impl GatewayClient {
@@ -30,18 +36,33 @@ impl GatewayClient {
             .user_agent(concat!("gvm-mcp/", env!("CARGO_PKG_VERSION")))
             .build()?;
 
-        let session_url = join_url(&config.gateway_url, &["api", "v1", "session"]);
-        let sessions = Arc::new(SessionManager::new(
-            http.clone(),
-            session_url,
-            config.username.clone(),
-            config.password.clone(),
-        ));
+        let fallback_auth = Self::fallback_auth(config);
 
         Ok(Self {
             http,
             base_url: config.gateway_url.clone(),
-            sessions,
+            fallback_auth,
+        })
+    }
+
+    fn fallback_auth(config: &Config) -> Option<String> {
+        match (&config.username, &config.password) {
+            (Some(user), Some(pass)) => Some(basic_auth(user, pass)),
+            _ => None,
+        }
+    }
+
+    /// Test seam: build a client with an explicit fallback `Basic` credential.
+    #[cfg(test)]
+    pub fn with_basic_fallback(
+        gateway_url: Url,
+        username: &str,
+        password: secrecy::SecretString,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            http: reqwest::Client::builder().build()?,
+            base_url: gateway_url,
+            fallback_auth: Some(basic_auth(username, &password)),
         })
     }
 
@@ -65,11 +86,6 @@ impl GatewayClient {
     /// `GET /api/v1/version` — gvmd version, unauthenticated.
     pub async fn version(&self) -> Result<VersionInfo, GatewayError> {
         self.get_unauthenticated(self.api_url(&["version"])).await
-    }
-
-    /// `GET /api/v1/session` — inspect the current session (authorized).
-    pub async fn session_info(&self) -> Result<SessionInfo, GatewayError> {
-        self.get_json(&["session"]).await
     }
 
     /// Authorized GET under `/api/v1`, decoded as JSON.
@@ -183,29 +199,20 @@ impl GatewayClient {
         Self::decode(url, response).await
     }
 
-    /// Send with the current session's bearer token; on 401, renew the
-    /// session exactly once (single-flight across tasks) and retry once.
-    /// `build` constructs the request minus authorization, so the retry can
-    /// attach the renewed token.
+    /// Send with the identity for the current request: the caller's forwarded
+    /// `Authorization` if present, otherwise the configured fallback. If
+    /// neither is available the request goes out unauthenticated and the
+    /// gateway answers `401`. `build` constructs the request minus
+    /// authorization.
     async fn send_authorized<F>(&self, build: F) -> Result<reqwest::Response, GatewayError>
     where
         F: Fn(&reqwest::Client) -> reqwest::RequestBuilder,
     {
-        let session = self.sessions.current().await?;
-        let response = build(&self.http)
-            .bearer_auth(session.bearer_token())
-            .send()
-            .await?;
-        if response.status() != StatusCode::UNAUTHORIZED {
-            return Ok(response);
+        let mut request = build(&self.http);
+        if let Some(authorization) = current_authorization(self.fallback_auth.as_deref()) {
+            request = request.header(AUTHORIZATION, authorization);
         }
-
-        tracing::debug!(url = %response.url(), "session rejected (401), renewing and retrying once");
-        let renewed = self.sessions.renew(&session).await?;
-        Ok(build(&self.http)
-            .bearer_auth(renewed.bearer_token())
-            .send()
-            .await?)
+        Ok(request.send().await?)
     }
 
     async fn expect_success(response: reqwest::Response) -> Result<(), GatewayError> {

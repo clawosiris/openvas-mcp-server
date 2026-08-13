@@ -4,31 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// `POST /api/v1/session` — 201 response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionCreated {
-    /// Opaque bearer token for subsequent requests.
-    pub session_token: String,
-    /// Idle timeout in seconds; the session expires if unused for this long.
-    pub expires_in: u64,
-    /// GMP protocol version.
-    pub gmp_version: String,
-}
-
-/// `GET /api/v1/session` — 200 response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionInfo {
-    pub user: String,
-    /// `active` or `expired`.
-    pub state: String,
-    pub created_at: String,
-    pub last_used_at: String,
-    /// Remaining seconds until idle expiry.
-    pub expires_in: i64,
-}
-
 /// `GET /health` — 200 response (unversioned root path).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthStatus {
@@ -199,33 +174,6 @@ pub struct Pagination {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn session_created_matches_spec_example() {
-        let json = r#"{
-            "sessionToken": "gvm_sess_9e6b2d4a8f1c",
-            "expiresIn": 300,
-            "gmpVersion": "22.7"
-        }"#;
-        let parsed: SessionCreated = serde_json::from_str(json).unwrap();
-        assert_eq!(parsed.session_token, "gvm_sess_9e6b2d4a8f1c");
-        assert_eq!(parsed.expires_in, 300);
-        assert_eq!(parsed.gmp_version, "22.7");
-    }
-
-    #[test]
-    fn session_info_matches_spec_example() {
-        let json = r#"{
-            "user": "admin",
-            "state": "active",
-            "createdAt": "2026-08-09T21:00:00Z",
-            "lastUsedAt": "2026-08-09T21:01:00Z",
-            "expiresIn": 300
-        }"#;
-        let parsed: SessionInfo = serde_json::from_str(json).unwrap();
-        assert_eq!(parsed.user, "admin");
-        assert_eq!(parsed.state, "active");
-    }
 
     #[test]
     fn version_info_matches_spec_example() {

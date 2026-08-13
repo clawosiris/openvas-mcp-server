@@ -3,11 +3,15 @@
 
 use clap::Parser;
 use gvm_mcp::config::{Cli, Config};
-use wiremock::matchers::{basic_auth, method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::MockServer;
+use wiremock::ResponseTemplate;
 
 pub const USERNAME: &str = "admin";
 pub const PASSWORD: &str = "s3cret";
+
+/// The `Authorization` header the client sends for `USERNAME`/`PASSWORD`
+/// (`Basic base64(admin:s3cret)`), for tests that assert credential forwarding.
+pub const EXPECTED_BASIC: &str = "Basic YWRtaW46czNjcmV0";
 
 /// Config pointing at a mock gateway.
 pub fn config_for(server: &MockServer) -> Config {
@@ -54,15 +58,6 @@ pub fn config_for_dead_port() -> Config {
     Config::from_cli(cli).expect("test config must be valid")
 }
 
-/// JSON body of a `201 Created` session response.
-pub fn session_created_body(token: &str) -> serde_json::Value {
-    serde_json::json!({
-        "sessionToken": token,
-        "expiresIn": 300,
-        "gmpVersion": "22.7"
-    })
-}
-
 /// An RFC 9457 problem+json response with the gateway's content type.
 pub fn problem_response(status: u16, code: &str, title: &str) -> ResponseTemplate {
     ResponseTemplate::new(status).set_body_raw(
@@ -76,16 +71,4 @@ pub fn problem_response(status: u16, code: &str, title: &str) -> ResponseTemplat
         .to_string(),
         "application/problem+json",
     )
-}
-
-/// Mount a login mock that issues `token` once, verifying Basic credentials.
-pub async fn mount_login_once(server: &MockServer, token: &str) {
-    Mock::given(method("POST"))
-        .and(path("/api/v1/session"))
-        .and(basic_auth(USERNAME, PASSWORD))
-        .respond_with(ResponseTemplate::new(201).set_body_json(session_created_body(token)))
-        .up_to_n_times(1)
-        .expect(1)
-        .mount(server)
-        .await;
 }

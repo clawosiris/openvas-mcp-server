@@ -5,7 +5,8 @@ mod support;
 
 use gvm_mcp::mcp::GvmMcpServer;
 use support::config_for;
-use wiremock::MockServer;
+use wiremock::matchers::{header, method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 async fn spawn_http_server(allowed_hosts: &[&str]) -> (std::net::SocketAddr, MockServer) {
     let gateway = MockServer::start().await;
@@ -98,6 +99,88 @@ async fn initialize_and_list_tools_over_http() {
             .any(|tool| tool["name"] == "openvas_test_connection"),
         "expected openvas_test_connection in tool list"
     );
+}
+
+#[tokio::test]
+async fn inbound_authorization_is_forwarded_to_the_gateway() {
+    let (addr, gateway) = spawn_http_server(&["127.0.0.1"]).await;
+
+    // The gateway answers the tool's list call only when it carries the
+    // caller's bearer token — proving the inbound Authorization is forwarded,
+    // overriding the configured fallback Basic credential.
+    Mock::given(method("GET"))
+        .and(path("/api/v1/targets"))
+        .and(header("authorization", "Bearer caller-token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [{"id": "tg-1", "name": "webservers", "hosts": ["10.0.0.0/24"]}],
+            "pagination": {"page": 1, "perPage": 25, "total": 1, "totalPages": 1}
+        })))
+        .expect(1)
+        .mount(&gateway)
+        .await;
+
+    let client = reqwest::Client::new();
+    let url = format!("http://{addr}/mcp");
+    let auth = "Bearer caller-token";
+
+    // initialize (carry the caller's Authorization from the very first call)
+    let init = client
+        .post(&url)
+        .header("Accept", "application/json, text/event-stream")
+        .header("Authorization", auth)
+        .json(&initialize_body())
+        .send()
+        .await
+        .unwrap();
+    let session_id = init
+        .headers()
+        .get("mcp-session-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
+    let with_session = |req: reqwest::RequestBuilder| match &session_id {
+        Some(s) => req.header("mcp-session-id", s.clone()),
+        None => req,
+    };
+
+    with_session(
+        client
+            .post(&url)
+            .header("Accept", "application/json, text/event-stream")
+            .header("Authorization", auth)
+            .json(&serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"})),
+    )
+    .send()
+    .await
+    .unwrap();
+
+    // tools/call openvas_list_targets, carrying the caller's Authorization.
+    let call = with_session(
+        client
+            .post(&url)
+            .header("Accept", "application/json, text/event-stream")
+            .header("Authorization", auth)
+            .json(&serde_json::json!({
+                "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                "params": {"name": "openvas_list_targets", "arguments": {}}
+            })),
+    )
+    .send()
+    .await
+    .unwrap();
+    assert!(call.status().is_success(), "call failed: {}", call.status());
+
+    let body = parse_payload(&call.text().await.unwrap());
+    let result = &body["result"];
+    assert_ne!(
+        result["isError"],
+        serde_json::Value::Bool(true),
+        "got: {result}"
+    );
+    let text = result["content"][0]["text"].as_str().unwrap();
+    let payload: serde_json::Value = serde_json::from_str(text).unwrap();
+    assert_eq!(payload["targets"][0]["id"], "tg-1");
+    // The gateway mock's `.expect(1)` verifies the forwarded token was used.
 }
 
 #[tokio::test]

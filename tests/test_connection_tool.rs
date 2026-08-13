@@ -1,12 +1,12 @@
-//! Mock-gateway tests for the `openvas_test_connection` tool: the Phase 0
-//! vertical slice (health → version → authenticated session round-trip).
+//! Mock-gateway tests for the `openvas_test_connection` tool: health →
+//! version → one authenticated call verifying the forwarded identity.
 
 mod support;
 
 use gvm_mcp::mcp::GvmMcpServer;
 use rmcp::model::ContentBlock;
-use support::{config_for, mount_login_once, problem_response};
-use wiremock::matchers::{bearer_token, method, path};
+use support::{EXPECTED_BASIC, config_for, problem_response};
+use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 async fn mount_healthy_gateway(server: &MockServer) {
@@ -25,16 +25,13 @@ async fn mount_healthy_gateway(server: &MockServer) {
         })))
         .mount(server)
         .await;
-    mount_login_once(server, "token-a").await;
+    // The auth probe: the request must carry the fallback Basic credential.
     Mock::given(method("GET"))
-        .and(path("/api/v1/session"))
-        .and(bearer_token("token-a"))
+        .and(path("/api/v1/targets"))
+        .and(header("authorization", EXPECTED_BASIC))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "user": "admin",
-            "state": "active",
-            "createdAt": "2026-08-09T21:00:00Z",
-            "lastUsedAt": "2026-08-09T21:01:00Z",
-            "expiresIn": 300
+            "data": [],
+            "pagination": {"page": 1, "perPage": 1, "total": 0, "totalPages": 0}
         })))
         .mount(server)
         .await;
@@ -65,8 +62,7 @@ async fn reports_full_stack_health_on_success() {
     let report: serde_json::Value = serde_json::from_str(&text).unwrap();
     assert_eq!(report["gatewayStatus"], "ok");
     assert_eq!(report["gmpVersion"], "22.7");
-    assert_eq!(report["sessionUser"], "admin");
-    assert_eq!(report["sessionState"], "active");
+    assert_eq!(report["authenticated"], true);
 }
 
 #[tokio::test]
@@ -99,8 +95,9 @@ async fn bad_credentials_are_a_legible_tool_error() {
         })))
         .mount(&server)
         .await;
-    Mock::given(method("POST"))
-        .and(path("/api/v1/session"))
+    // The gateway rejects the identity → the auth probe 401s.
+    Mock::given(method("GET"))
+        .and(path("/api/v1/targets"))
         .respond_with(problem_response(401, "unauthorized", "Unauthorized"))
         .mount(&server)
         .await;

@@ -7,7 +7,7 @@ use gvm_mcp::mcp::tools::common::{GetByIdParams, ListParams};
 use gvm_mcp::mcp::tools::identity::{CreateUserParams, UpdateUserSettingParams};
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock};
-use support::{config_with_args, mount_login_once};
+use support::config_with_args;
 use wiremock::matchers::{body_json, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -26,7 +26,6 @@ fn json_of(result: &CallToolResult) -> serde_json::Value {
 
 async fn identity_server() -> (MockServer, GvmMcpServer) {
     let server = MockServer::start().await;
-    mount_login_once(&server, "token-a").await;
     let mcp = GvmMcpServer::new(config_with_args(
         &server,
         &["--toolsets", "default,identity"],

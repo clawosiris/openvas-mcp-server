@@ -14,7 +14,7 @@ MCP client (Claude, etc.)
         │  stdio / streamable HTTP
         ▼
       gvm-mcp  (this repo, single binary)
-        │  HTTP/JSON + ephemeral bearer session
+        │  HTTP/JSON — forwards the caller's gvmd identity
         ▼
   rust-gvm-api REST gateway  (/api/v1)
         │  GMP over Unix socket
@@ -60,18 +60,40 @@ your MCP client:
 ```
 
 Start with the `openvas_test_connection` tool — it checks gateway liveness,
-the gvmd version and an authenticated session round-trip.
+the gvmd version and makes one authenticated call to confirm the identity is
+accepted.
+
+## Authentication
+
+gvm-mcp holds no session and invents no auth of its own — it forwards a
+caller's gvmd identity to the gateway, and the gateway (backed by gvmd) is
+the sole authority. The `Authorization` used for each gateway call is
+resolved per request:
+
+1. the inbound MCP request's `Authorization` header, when present — so each
+   **streamable-HTTP caller authenticates as themselves** (send `Basic`
+   gvmd credentials, or a gateway session token you obtained); otherwise
+2. a fallback `Basic` header built from configured `GVM_USERNAME` /
+   `GVM_PASSWORD` — used for **stdio**, and for HTTP callers that send none.
+
+If neither is available, gateway calls go out unauthenticated and are
+rejected with `401`, surfaced as a legible tool error. No credentials are
+ever cached as a session; `--username`/`--password` are optional (omit them
+to require every HTTP caller to authenticate as themselves).
+
+`--allowed-hosts` is a DNS-rebinding guard, not authentication. For a
+public HTTP deployment, terminate TLS and (if you want a single shared
+identity) authenticate at a reverse proxy in front.
 
 ## Configuration
 
-Every flag has an environment variable. Credentials are the gvmd account the
-server uses to create short-lived gateway sessions (renewed automatically).
+Every flag has an environment variable.
 
 | Flag | Env | Default | Purpose |
 | ---- | --- | ------- | ------- |
 | `--gateway-url` | `GVM_GATEWAY_URL` | `http://127.0.0.1:8080` | rust-gvm-api origin (without `/api/v1`) |
-| `--username` | `GVM_USERNAME` | — | gvmd username |
-| `--password` | `GVM_PASSWORD` | — | gvmd password |
+| `--username` | `GVM_USERNAME` | — | gvmd username for the fallback identity (optional) |
+| `--password` | `GVM_PASSWORD` | — | gvmd password for the fallback identity (optional) |
 | `--password-file` | `GVM_PASSWORD_FILE` | — | file containing the password (takes precedence) |
 | `--transport` | `MCP_TRANSPORT` | `stdio` | `stdio` or `streamable-http` |
 | `--bind-addr` | `MCP_BIND_ADDR` | `127.0.0.1:8000` | HTTP bind address |

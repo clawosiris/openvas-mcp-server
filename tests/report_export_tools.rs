@@ -9,7 +9,7 @@ use gvm_mcp::mcp::tools::common::{GetByIdParams, ListParams};
 use gvm_mcp::mcp::tools::reports::{ExportReportParams, ReportPageParams};
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock};
-use support::{config_for, mount_login_once, problem_response};
+use support::{config_for, problem_response};
 use wiremock::matchers::{body_json, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -31,7 +31,6 @@ fn json_of(result: &CallToolResult) -> serde_json::Value {
 
 async fn server_with_login() -> (MockServer, GvmMcpServer) {
     let server = MockServer::start().await;
-    mount_login_once(&server, "token-a").await;
     let mcp = GvmMcpServer::new(config_for(&server)).unwrap();
     (server, mcp)
 }
