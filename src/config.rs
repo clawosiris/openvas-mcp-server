@@ -44,6 +44,20 @@ pub struct Cli {
     #[arg(long, value_enum, env = "MCP_TRANSPORT", default_value_t = Transport::Stdio)]
     pub transport: Transport,
 
+    /// Bind address for the streamable-http transport
+    #[arg(long, env = "MCP_BIND_ADDR", default_value = "127.0.0.1:8000")]
+    pub bind_addr: std::net::SocketAddr,
+
+    /// Host headers accepted by the streamable-http transport (DNS-rebinding
+    /// guard). Use "*" to disable the check behind a trusted reverse proxy.
+    #[arg(
+        long,
+        env = "MCP_ALLOWED_HOSTS",
+        value_delimiter = ',',
+        default_value = "localhost,127.0.0.1,::1"
+    )]
+    pub allowed_hosts: Vec<String>,
+
     /// Comma-separated toolsets to expose ("default", "all", or names from
     /// --list-toolsets). Identity is always opt-in.
     #[arg(long, env = "GVM_TOOLSETS", value_delimiter = ',')]
@@ -73,6 +87,8 @@ pub struct Config {
     pub username: String,
     pub password: SecretString,
     pub transport: Transport,
+    pub bind_addr: std::net::SocketAddr,
+    pub allowed_hosts: Vec<String>,
     pub toolsets: ToolsetSelection,
     pub read_only: bool,
     pub timeout: Duration,
@@ -123,6 +139,8 @@ impl Config {
             username,
             password: SecretString::from(password),
             transport: cli.transport,
+            bind_addr: cli.bind_addr,
+            allowed_hosts: cli.allowed_hosts,
             toolsets,
             read_only: cli.read_only,
             timeout: Duration::from_secs(cli.timeout_secs),

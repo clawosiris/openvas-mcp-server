@@ -1,0 +1,41 @@
+# Example wiring: MCP server ↔ rust-gvm-api gateway ↔ gvmd.
+#
+# Drop the gvm-mcp service into a Greenbone Community Edition compose stack
+# (the gateway needs the gvmd Unix socket volume from that stack).
+#
+#   GVM_USERNAME=admin GVM_PASSWORD=... docker compose -f docker-compose.example.yml up
+#
+# MCP endpoint: http://localhost:8000/mcp (streamable HTTP)
+
+services:
+  gvm-gateway:
+    image: ghcr.io/greenbone-hive/rust-gvm-api:latest
+    restart: on-failure
+    volumes:
+      # From the Greenbone Community Edition stack:
+      - gvmd_socket_vol:/run/gvmd
+    environment:
+      GVM_API_LISTEN: 0.0.0.0:8080
+      GVMD_SOCKET: /run/gvmd/gvmd.sock
+
+  gvm-mcp:
+    image: ghcr.io/clawosiris/openvas-mcp-server:latest
+    build: .
+    restart: on-failure
+    depends_on:
+      - gvm-gateway
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      GVM_GATEWAY_URL: http://gvm-gateway:8080
+      GVM_USERNAME: ${GVM_USERNAME:?Set GVM_USERNAME}
+      GVM_PASSWORD: ${GVM_PASSWORD:?Set GVM_PASSWORD}
+      # Streamable HTTP defaults baked into the image:
+      # MCP_TRANSPORT=streamable-http, MCP_BIND_ADDR=0.0.0.0:8000,
+      # MCP_ALLOWED_HOSTS=* (host check off inside the container network).
+      # Optional hardening / shaping:
+      # GVM_READ_ONLY: "true"
+      # GVM_TOOLSETS: "default"        # or e.g. "targets,tasks,reports"
+
+volumes:
+  gvmd_socket_vol:
