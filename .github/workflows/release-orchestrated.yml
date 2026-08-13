@@ -1,0 +1,70 @@
+name: Orchestrated Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (without 'v' prefix)"
+        required: true
+        type: string
+      release-type:
+        description: "Release type (alpha, beta, release-candidate, patch, minor, major)"
+        required: false
+        type: string
+        default: "patch"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  prepare:
+    name: "Prepare v${{ inputs.version }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Create release
+        uses: greenbone/actions/release@v3
+        with:
+          github-user: ${{ vars.RELEASE_USER || 'clawosiris' }}
+          github-user-mail: ${{ vars.RELEASE_USER_MAIL || 'clawosiris@users.noreply.github.com' }}
+          github-user-token: ${{ secrets.RELEASE_TOKEN }}
+          release-type: ${{ inputs.release-type }}
+          release-version: ${{ inputs.version }}
+          versioning-scheme: semver
+          project-types: pyproject
+          next-version: "false"
+          admin-bypass: "false"
+          update-project: "false"
+
+  cli:
+    name: Release CLI
+    needs: prepare
+    uses: ./.github/workflows/release-cli.yml
+    with:
+      version: ${{ inputs.version }}
+      tag: v${{ inputs.version }}
+    permissions:
+      contents: write
+      packages: write
+
+  mcp:
+    name: Release MCP
+    needs: prepare
+    uses: ./.github/workflows/release-mcp.yml
+    with:
+      version: ${{ inputs.version }}
+      tag: v${{ inputs.version }}
+    permissions:
+      contents: write
+      packages: write
+
+  collect:
+    name: Release complete
+    needs: [cli, mcp]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "✅ All release artifacts published for v${{ inputs.version }}"

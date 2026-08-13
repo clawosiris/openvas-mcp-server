@@ -1,12 +1,21 @@
-FROM python:3.12-slim AS builder
+# ============================================================
+# Multi-target Dockerfile for OpenVAS MCP Server and CLI
+#
+# Build targets:
+#   docker build --target mcp -t openvas-mcp-server .
+#   docker build --target cli -t openvas-cli .
+# ============================================================
+
+# === Shared builder ===
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 
 # Install Poetry
 RUN pip install --no-cache-dir poetry==1.8.2
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+# Copy dependency files and README (required by Poetry for package install)
+COPY pyproject.toml poetry.lock* README.md ./
 
 # Configure Poetry to not use virtualenvs in container
 RUN poetry config virtualenvs.create false
@@ -21,7 +30,8 @@ COPY src ./src
 RUN poetry install --no-interaction --no-ansi --only main
 
 
-FROM python:3.12-slim AS runtime
+# === Shared runtime base ===
+FROM python:3.14-slim AS base
 
 WORKDIR /app
 
@@ -38,5 +48,19 @@ USER appuser
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# MCP server runs on stdio by default
+
+# === MCP Server ===
+FROM base AS mcp
+
+ENV MCP_TRANSPORT=stdio
+
+# Expose HTTP port for streamable-http/sse transports
+EXPOSE 8000
+
 ENTRYPOINT ["openvas-mcp"]
+
+
+# === CLI (toolbox container — used via docker exec) ===
+FROM base AS cli
+
+CMD ["sleep", "infinity"]

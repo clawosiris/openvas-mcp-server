@@ -15,6 +15,10 @@ on:
 
 permissions:
   contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   version:
@@ -26,8 +30,8 @@ jobs:
     permissions:
       contents: write
 
-  build:
-    name: Build CLI
+  docker:
+    name: Build and Push CLI Docker Image
     runs-on: ubuntu-latest
     needs: [version]
     if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
@@ -44,43 +48,52 @@ jobs:
             echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
           fi
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ steps.vars.outputs.tag }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
-          python-version: "3.12"
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Update version in pyproject.toml
-        run: poetry version ${{ steps.vars.outputs.version }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
-
-      - name: Run tests
-        run: poetry run pytest
-
-      - name: Build package
-        run: poetry build
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
         with:
-          name: openvas-mcp-cli-${{ steps.vars.outputs.version }}
-          path: dist/*
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/openvas-cli
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest,enable=${{ github.event_name != 'workflow_dispatch' }}
+
+      - name: Build and push CLI Docker image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          target: cli
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=cli
+          cache-to: type=gha,mode=max,scope=cli
 
       - name: Create GitHub Release (standalone only)
         if: github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: "CLI ${{ steps.vars.outputs.version }}"
-          files: dist/*
+          body: |
+            ## Docker Image
+
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/openvas-cli:${{ steps.vars.outputs.version }}
+            ```
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

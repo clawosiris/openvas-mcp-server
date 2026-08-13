@@ -18,7 +18,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         service: Task service instance.
     """
 
-    @server.tool(name="openvas_list_tasks")
+    @server.tool(structured_output=False, name="openvas_list_tasks")
     def list_tasks(filter: str = "") -> dict[str, Any]:
         """List all scan tasks.
 
@@ -31,7 +31,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         result = service.list(filter)
         return result.model_dump()
 
-    @server.tool(name="openvas_get_task")
+    @server.tool(structured_output=False, name="openvas_get_task")
     def get_task(task_id: str) -> dict[str, Any]:
         """Get task details by ID.
 
@@ -44,7 +44,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         result = service.get(task_id)
         return result.model_dump()
 
-    @server.tool(name="openvas_create_task")
+    @server.tool(structured_output=False, name="openvas_create_task")
     def create_task(
         name: str,
         target_id: str,
@@ -74,7 +74,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         result = service.create(request)
         return result.model_dump()
 
-    @server.tool(name="openvas_start_task")
+    @server.tool(structured_output=False, name="openvas_start_task")
     def start_task(task_id: str) -> dict[str, Any]:
         """Start a scan task.
 
@@ -87,7 +87,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         report_id = service.start(task_id)
         return {"task_id": task_id, "report_id": report_id, "status": "started"}
 
-    @server.tool(name="openvas_stop_task")
+    @server.tool(structured_output=False, name="openvas_stop_task")
     def stop_task(task_id: str) -> dict[str, Any]:
         """Stop a running scan task.
 
@@ -100,7 +100,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         success = service.stop(task_id)
         return {"task_id": task_id, "success": success, "status": "stop_requested"}
 
-    @server.tool(name="openvas_resume_task")
+    @server.tool(structured_output=False, name="openvas_resume_task")
     def resume_task(task_id: str) -> dict[str, Any]:
         """Resume a stopped or paused scan task.
 
@@ -113,7 +113,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         report_id = service.resume(task_id)
         return {"task_id": task_id, "report_id": report_id, "status": "resumed"}
 
-    @server.tool(name="openvas_delete_task")
+    @server.tool(structured_output=False, name="openvas_delete_task")
     def delete_task(task_id: str, ultimate: bool = False) -> dict[str, Any]:
         """Delete a scan task.
 
@@ -127,7 +127,7 @@ def register_task_tools(server: FastMCP, service: TaskService) -> None:
         success = service.delete(task_id, ultimate=ultimate)
         return {"task_id": task_id, "success": success}
 
-    @server.tool(name="openvas_clone_task")
+    @server.tool(structured_output=False, name="openvas_clone_task")
     def clone_task(task_id: str) -> dict[str, Any]:
         """Clone an existing task.
 
