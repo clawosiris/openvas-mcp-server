@@ -22,7 +22,7 @@ docker run --rm \
   -e GVM_USERNAME=admin \
   -e GVM_PASSWORD=secret \
   -p 127.0.0.1:8000:8000 \
-  ghcr.io/clawosiris/openvas-mcp-server:latest
+  ghcr.io/greenbone-hive/openvas-mcp-server:latest
 ```
 
 The image is distroless, runs as nonroot and defaults to the
@@ -46,7 +46,7 @@ shasum -c gvm-mcp-<version>-<target>.tar.gz.sha256
 ## Option 3: Build from source
 
 ```bash
-git clone https://github.com/clawosiris/openvas-mcp-server.git
+git clone https://github.com/greenbone-hive/openvas-mcp-server.git
 cd openvas-mcp-server
 cargo build --release      # requires Rust 1.90+
 ./target/release/gvm-mcp --help

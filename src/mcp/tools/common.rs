@@ -69,10 +69,10 @@ pub fn json_result(value: &impl Serialize) -> Result<CallToolResult, McpError> {
     Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
-/// Builder for gateway JSON request bodies. Tool arguments are snake_case
-/// (Python-parity MCP surface); gateway bodies are camelCase — every `set*`
-/// call names the gateway key explicitly, and unset optionals are omitted
-/// entirely so the gateway's "absent means unchanged" semantics hold.
+/// Builder for gateway JSON request bodies. Tool arguments are snake_case;
+/// gateway bodies are camelCase — every `set*` call names the gateway key
+/// explicitly, and unset optionals are omitted entirely so the gateway's
+/// "absent means unchanged" semantics hold.
 #[derive(Debug, Default)]
 pub struct Body(serde_json::Map<String, serde_json::Value>);
 

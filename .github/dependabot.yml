@@ -1,17 +1,25 @@
 version: 2
+
 updates:
-  # Python dependencies
-  - package-ecosystem: "pip"
+  # Rust dependencies (Cargo)
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "python"
+      - "rust"
     commit-message:
       prefix: "deps"
+    groups:
+      cargo:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -26,14 +34,15 @@ updates:
     commit-message:
       prefix: "ci"
 
-  # Docker
+  # Docker base image
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "docker"
     commit-message:
-      prefix: "docker"
+      prefix: "ci"

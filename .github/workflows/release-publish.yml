@@ -1,0 +1,202 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      - name: Validate tag against Cargo.toml version
+        id: release
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+
+          if [[ ! "${TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must be semver-shaped with a leading 'v': ${TAG}" >&2
+            exit 1
+          fi
+
+          VERSION="${TAG#v}"
+          PKG_VERSION="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["version"])')"
+
+          if [[ "${PKG_VERSION}" != "${VERSION}" ]]; then
+            echo "Tag ${TAG} does not match Cargo.toml package version ${PKG_VERSION}" >&2
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+  test:
+    name: Test
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2
+      - run: cargo test --all-features
+
+  binaries:
+    name: Binary (${{ matrix.target }})
+    needs: [validate, test]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package
+        run: |
+          cd target/${{ matrix.target }}/release
+          NAME="gvm-mcp-${{ needs.validate.outputs.tag }}-${{ matrix.target }}"
+          tar czf "${NAME}.tar.gz" gvm-mcp
+          shasum -a 256 "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+      - name: Store binary assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gvm-mcp-${{ matrix.target }}-release-assets
+          path: |
+            target/${{ matrix.target }}/release/*.tar.gz
+            target/${{ matrix.target }}/release/*.tar.gz.sha256
+          if-no-files-found: error
+
+  docker:
+    name: Docker image
+    needs: [validate, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref }}
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v7.1.0
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ needs.validate.outputs.version }}
+
+  release-assets:
+    name: Publish release assets
+    needs: [validate, binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download generated release assets
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          pattern: "*-release-assets"
+          path: dist/release-assets
+          merge-multiple: true
+      - name: Verify binary archives and checksums
+        run: |
+          shopt -s nullglob
+          archives=(dist/release-assets/*.tar.gz)
+          if (( ${#archives[@]} == 0 )); then
+            echo "No binary archives were generated for the release" >&2
+            exit 1
+          fi
+          for asset in "${archives[@]}"; do
+            if [[ ! -f "${asset}.sha256" ]]; then
+              echo "Missing checksum for ${asset}" >&2
+              exit 1
+            fi
+          done
+      - name: Ensure GitHub release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then
+            exit 0
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --repo "${GH_REPO}" \
+            --verify-tag \
+            --title "${RELEASE_TAG}" \
+            --generate-notes
+      - name: Upload generated assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release upload "${RELEASE_TAG}" dist/release-assets/* --clobber
+
+  sbom:
+    name: Generate SBOM
+    needs: [validate, test, release-assets]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx
+      - name: Generate and upload SBOMs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          cargo cyclonedx --format json --spec-version 1.5
+          cargo cyclonedx --format xml --spec-version 1.5
+          mkdir -p sbom-artifacts
+          find . -name '*.cdx.json' -not -path '*/target/*' -not -path '*/sbom-artifacts/*' -exec cp {} sbom-artifacts/ \;
+          find . -name '*.cdx.xml' -not -path '*/target/*' -not -path '*/sbom-artifacts/*' -exec cp {} sbom-artifacts/ \;
+          cd sbom-artifacts && tar czf ../gvm-mcp-sbom.tar.gz -- *.cdx.* && cd ..
+          sha256sum gvm-mcp-sbom.tar.gz > gvm-mcp-sbom.tar.gz.sha256
+          gh release upload "${RELEASE_TAG}" gvm-mcp-sbom.tar.gz gvm-mcp-sbom.tar.gz.sha256 --clobber
+
+  collect:
+    name: Release complete
+    needs: [validate, release-assets, sbom, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All release artifacts published for ${{ needs.validate.outputs.tag }}"

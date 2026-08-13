@@ -6,7 +6,7 @@ Rust. A thin, typed MCP front end over the
 all GMP/gvmd knowledge lives in the gateway, this server maps MCP tools onto
 gateway HTTP endpoints.
 
-[![CI](https://github.com/clawosiris/openvas-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/clawosiris/openvas-mcp-server/actions/workflows/ci.yml)
+[![CI](https://github.com/greenbone-hive/openvas-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/greenbone-hive/openvas-mcp-server/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ```text
@@ -22,11 +22,6 @@ MCP client (Claude, etc.)
       gvmd
 ```
 
-> [!NOTE]
-> This is a from-scratch Rust rewrite of the original Python
-> server/CLI. If you are coming from the Python version, see the
-> [migration note](#migrating-from-the-python-server).
-
 ## Quick start
 
 ### Docker (streamable HTTP)
@@ -37,7 +32,7 @@ docker run --rm \
   -e GVM_USERNAME=admin \
   -e GVM_PASSWORD=secret \
   -p 127.0.0.1:8000:8000 \
-  ghcr.io/clawosiris/openvas-mcp-server:latest
+  ghcr.io/greenbone-hive/openvas-mcp-server:latest
 ```
 
 MCP endpoint: `http://localhost:8000/mcp`. A full stack example (gateway +
@@ -143,20 +138,22 @@ DTOs and endpoint shapes mirror the gateway's
 contract. See [docs/mcp](docs/mcp/) for detailed install/usage/development
 guides.
 
-## Migrating from the Python server
+## Limitations
 
-Tool names are unchanged (`openvas_*`), so existing prompts keep working.
-The differences that matter:
-
-- The server no longer speaks GMP directly — it requires a running
-  [rust-gvm-api](https://github.com/greenbone-hive/rust-gvm-api) gateway
-  (`GVM_SOCKET_PATH`/`GVM_STYLE` are gone, `GVM_GATEWAY_URL` is new).
-- The standalone Python `openvas` CLI is not part of the Rust server. The
-  last Python release remains available in the git history and on tags
-  prior to the Rust rewrite.
-- `openvas_clone_*` and ticket/filter/tag/host write tools are not exposed
-  yet: the gateway does not serve those endpoints. They return once the
+- Requires a running
+  [rust-gvm-api](https://github.com/greenbone-hive/rust-gvm-api) gateway; the
+  server never speaks GMP directly.
+- Clone operations and ticket/filter/tag/host write tools are not exposed
+  yet — the gateway does not serve those endpoints. They land once the
   gateway does.
+- Compliance (audits/policies) tools depend on the gateway's compliance
+  surface and are not yet available.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development loop, how to add a
+tool, and PR conventions. Security issues: see [SECURITY.md](SECURITY.md).
+Releases follow [RELEASING.md](RELEASING.md).
 
 ## License
 
