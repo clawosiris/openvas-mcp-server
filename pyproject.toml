@@ -23,7 +23,7 @@ packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-python-gvm = "^26.0"
+python-gvm = ">=26,<28"
 mcp = { version = "^1.0", extras = ["cli"] }
 pydantic = "^2.0"
 typer = "^0.15"
