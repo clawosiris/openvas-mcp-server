@@ -150,6 +150,34 @@ impl GatewayClient {
         Self::expect_success(response).await
     }
 
+    /// Authorized GET under `/api/v1` returning raw bytes plus the
+    /// `Content-Type` and `Content-Disposition` filename (artifact
+    /// downloads, e.g. rendered report exports).
+    pub async fn get_bytes(
+        &self,
+        segments: &[&str],
+    ) -> Result<(Vec<u8>, Option<String>, Option<String>), GatewayError> {
+        let url = self.api_url(segments);
+        let response = self.send_authorized(|http| http.get(url.clone())).await?;
+        if !response.status().is_success() {
+            return Err(error_from_response(response).await);
+        }
+
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let filename = response
+            .headers()
+            .get(reqwest::header::CONTENT_DISPOSITION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.split("filename=").nth(1))
+            .map(|v| v.trim_matches('"').to_owned());
+        let bytes = response.bytes().await?.to_vec();
+        Ok((bytes, content_type, filename))
+    }
+
     async fn get_unauthenticated<T: DeserializeOwned>(&self, url: Url) -> Result<T, GatewayError> {
         let response = self.http.get(url.clone()).send().await?;
         Self::decode(url, response).await

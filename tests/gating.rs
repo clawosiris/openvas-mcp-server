@@ -84,11 +84,12 @@ async fn default_tool_count_matches_wired_toolsets() {
     // targets/scan-configs/schedules/credentials/alerts/port-lists/notes/
     // overrides + delete_report). A mismatch means a router was not wired
     // into server.rs (or a tool was added without updating this inventory).
-    assert_eq!(mcp.tool_names().len(), 71, "got: {:?}", mcp.tool_names());
+    assert_eq!(mcp.tool_names().len(), 80, "got: {:?}", mcp.tool_names());
 
     let read_only = GvmMcpServer::new(config_with_args(&server, &["--read-only"])).unwrap();
-    // Every mutating tool disappears in read-only mode.
-    assert_eq!(read_only.tool_names().len(), 40);
+    // Every mutating tool disappears in read-only mode (report drill-down,
+    // export and download stay: they mutate nothing durable).
+    assert_eq!(read_only.tool_names().len(), 48);
     assert!(
         !read_only
             .tool_names()

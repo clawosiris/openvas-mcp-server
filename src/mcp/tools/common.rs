@@ -173,9 +173,19 @@ pub async fn list_summarized(
     params: &ListParams,
     stage: &str,
 ) -> Result<CallToolResult, McpError> {
-    let value: serde_json::Value = match gateway
-        .get_json_query(&[resource], &params.to_query())
-        .await
+    list_summarized_at(gateway, &[resource], out_key, keys, params, stage).await
+}
+
+/// [`list_summarized`] for nested paths (e.g. report drill-down pages).
+pub async fn list_summarized_at(
+    gateway: &crate::gateway::GatewayClient,
+    segments: &[&str],
+    out_key: &str,
+    keys: &[&str],
+    params: &ListParams,
+    stage: &str,
+) -> Result<CallToolResult, McpError> {
+    let value: serde_json::Value = match gateway.get_json_query(segments, &params.to_query()).await
     {
         Ok(value) => value,
         Err(err) => return Ok(crate::mcp::error::gateway_tool_error(stage, &err)),
