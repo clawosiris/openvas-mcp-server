@@ -1,96 +1,72 @@
-# MCP Development
+# Development
 
-## Project Structure
+## Layout
 
-```
-src/presentation/mcp/
-├── __init__.py
-├── server.py         # MCP server entry point
-└── toolsets/
-    ├── __init__.py
-    ├── targets.py    # Target tools
-    ├── tasks.py      # Task/scan tools
-    └── ...
-```
-
-## Adding a New Tool
-
-1. Create or update toolset in `toolsets/`:
-
-```python
-# toolsets/targets.py
-from mcp.server.fastmcp import FastMCP
-
-from services.targets import TargetService
-
-def register_target_tools(server: FastMCP, service: TargetService):
-    
-    @server.tool(name="openvas_list_targets")
-    def list_targets(filter: str = "") -> dict:
-        """List all scan targets.
-        
-        Args:
-            filter: Optional GMP filter string
-            
-        Returns:
-            List of targets with id, name, hosts
-        """
-        result = service.list(filter)
-        return result.model_dump()
-    
-    @server.tool(name="openvas_create_target")
-    def create_target(name: str, hosts: list[str]) -> dict:
-        """Create a new scan target.
-        
-        Args:
-            name: Target name
-            hosts: List of hosts (IP, CIDR, or hostname)
-            
-        Returns:
-            Created target details
-        """
-        request = TargetCreateRequest(name=name, hosts=hosts)
-        result = service.create(request)
-        return result.model_dump()
+```text
+src/
+  main.rs            CLI entry: transport selection, logging (stderr)
+  config.rs          clap CLI → validated Config
+  gateway/           HTTP client for the rust-gvm-api gateway
+    client.rs        request plumbing, bearer injection, 401 retry
+    session.rs       SessionManager: lazy login, single-flight renewal
+    models.rs        serde DTOs mirroring the gateway spec
+    error.rs         RFC 9457 problem+json → typed GatewayError
+  mcp/
+    server.rs        router composition, toolset + read-only gating
+    toolset.rs       Toolset enum and --toolsets parsing
+    error.rs         GatewayError → legible tool errors
+    http.rs          streamable-HTTP transport (axum)
+    tools/           one module per toolset; each exports <name>_router
+tests/               mock-gateway (wiremock) integration tests
 ```
 
-2. Register in `server.py`:
+Principles (from the roadmap): no business logic in this server — a tool is
+validate args → build gateway request → map response/error. Session handling
+and pagination are the only cross-cutting "smart" pieces. List output is
+summarized (token budget); `get` output is the gateway's JSON, unchanged.
 
-```python
-from .toolsets import targets
+## Adding a tool
 
-def create_server() -> FastMCP:
-    server = FastMCP(name="openvas-mcp")
-    
-    client = create_client(config)
-    targets.register_target_tools(server, TargetService(client))
-    
-    return server
-```
+1. Find the endpoint in the gateway's `spec/rest-api/*.yaml` (the contract).
+2. Add the tool to the matching `src/mcp/tools/<toolset>.rs` under the
+   `#[tool_router(router = <toolset>_router, ...)]` impl block. Reuse the
+   `common.rs` helpers (`list_summarized`, `get_passthrough`,
+   `create_resource`, `update_resource`, `delete_resource`, `Body`).
+3. Annotate honestly: `read_only_hint = true` for reads (this is what
+   `--read-only` filters on), `destructive_hint` for updates/deletes.
+4. If it starts a new toolset, wire the router in `server.rs` and extend
+   `toolset.rs`.
+5. Add a wiremock test asserting the request shape (path, query, body) and
+   the summarized output, and bump the inventory count in
+   `tests/gating.rs`.
 
-## Running Locally
+## Quality gate
 
 ```bash
-# Install in dev mode
-poetry install
-
-# Run MCP server (stdio)
-poetry run openvas-mcp
-
-# Test with MCP inspector
-npx @anthropic/mcp-inspector poetry run openvas-mcp
+cargo fmt --all --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test
 ```
 
-## Testing
+CI runs the same gate plus a release build with a CLI smoke test.
+
+## Live end-to-end tests
+
+`tests/e2e_live.rs` is `#[ignore]`d and drives a real gateway + gvmd:
 
 ```bash
-# Run MCP tests
-poetry run pytest tests/presentation/mcp/
+export GVM_E2E_GATEWAY_URL=http://localhost:8080
+export GVM_USERNAME=admin GVM_PASSWORD=secret
+cargo test --test e2e_live -- --ignored          # read-only checks
+GVM_E2E_SCAN=1 cargo test --test e2e_live -- --ignored   # + full scan lifecycle
 ```
 
-## Docker Build
+The scan lifecycle test creates a target and task named `gvm-mcp-e2e-*`,
+starts a scan against `127.0.0.1`, waits for it to finish and deletes what
+it created.
 
-```bash
-docker build -t openvas-mcp .
-docker run -e GVM_USERNAME=admin -e GVM_PASSWORD=secret openvas-mcp
-```
+## Releasing
+
+Tag `v*` on main. The release workflow builds binaries for
+linux/macOS (x86_64 + aarch64), attaches SHA-256 sums, and pushes the
+Docker image to GHCR.
