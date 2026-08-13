@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! MCP server for Greenbone Vulnerability Management (GVM/OpenVAS).
 //!
 //! Thin, typed MCP front end over the `rust-gvm-api` REST gateway. All GMP

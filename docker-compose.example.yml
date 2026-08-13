@@ -19,7 +19,7 @@ services:
       GVMD_SOCKET: /run/gvmd/gvmd.sock
 
   gvm-mcp:
-    image: ghcr.io/clawosiris/openvas-mcp-server:latest
+    image: ghcr.io/greenbone-hive/openvas-mcp-server:latest
     build: .
     restart: on-failure
     depends_on:
