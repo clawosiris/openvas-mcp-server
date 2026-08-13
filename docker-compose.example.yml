@@ -1,41 +1,44 @@
-# Example wiring: MCP server ↔ rust-gvm-api gateway ↔ gvmd.
+# Example: run gvm-mcp as a client of an existing rust-gvm-api gateway.
 #
-# Drop the gvm-mcp service into a Greenbone Community Edition compose stack
-# (the gateway needs the gvmd Unix socket volume from that stack).
+# gvm-mcp speaks ONLY to the rust-gvm-api REST gateway (HTTP/JSON) — it does
+# not run or talk to gvmd/GMP itself. This file defines just the MCP server;
+# the gateway (and the gvmd stack behind it) come from rust-gvm-api:
 #
-#   GVM_USERNAME=admin GVM_PASSWORD=... docker compose -f docker-compose.example.yml up
+#   https://github.com/greenbone-hive/rust-gvm-api  (see its compose.yaml /
+#   scripts/compose-dev.sh for a full local gateway + gvmd stack).
+#
+# Usage:
+#   1. Bring up a gateway and note its URL (e.g. http://localhost:8080).
+#   2. Point GVM_GATEWAY_URL at it and start this service:
+#        GVM_USERNAME=admin GVM_PASSWORD=secret \
+#        GVM_GATEWAY_URL=http://host.docker.internal:8080 \
+#        docker compose -f docker-compose.example.yml up
 #
 # MCP endpoint: http://localhost:8000/mcp (streamable HTTP)
 
 services:
-  gvm-gateway:
-    image: ghcr.io/greenbone-hive/rust-gvm-api:latest
-    restart: on-failure
-    volumes:
-      # From the Greenbone Community Edition stack:
-      - gvmd_socket_vol:/run/gvmd
-    environment:
-      GVM_API_LISTEN: 0.0.0.0:8080
-      GVMD_SOCKET: /run/gvmd/gvmd.sock
-
   gvm-mcp:
     image: ghcr.io/greenbone-hive/openvas-mcp-server:latest
     build: .
     restart: on-failure
-    depends_on:
-      - gvm-gateway
     ports:
       - "127.0.0.1:8000:8000"
     environment:
-      GVM_GATEWAY_URL: http://gvm-gateway:8080
+      # The only hard dependency: a reachable rust-gvm-api gateway.
+      GVM_GATEWAY_URL: ${GVM_GATEWAY_URL:?Set GVM_GATEWAY_URL to your rust-gvm-api gateway}
       GVM_USERNAME: ${GVM_USERNAME:?Set GVM_USERNAME}
       GVM_PASSWORD: ${GVM_PASSWORD:?Set GVM_PASSWORD}
-      # Streamable HTTP defaults baked into the image:
-      # MCP_TRANSPORT=streamable-http, MCP_BIND_ADDR=0.0.0.0:8000,
-      # MCP_ALLOWED_HOSTS=* (host check off inside the container network).
-      # Optional hardening / shaping:
+      # Streamable-HTTP defaults are baked into the image
+      # (MCP_TRANSPORT=streamable-http, MCP_BIND_ADDR=0.0.0.0:8000,
+      # MCP_ALLOWED_HOSTS=*). Optional hardening / shaping:
       # GVM_READ_ONLY: "true"
-      # GVM_TOOLSETS: "default"        # or e.g. "targets,tasks,reports"
+      # GVM_TOOLSETS: "targets,tasks,reports"
 
-volumes:
-  gvmd_socket_vol:
+# To run gvm-mcp on the gateway's own compose network instead of reaching it
+# over the host, attach this service to that network and set
+# GVM_GATEWAY_URL=http://gvm-gateway:8080:
+#
+#   networks:
+#     default:
+#       name: rust-gvm-api_default
+#       external: true
