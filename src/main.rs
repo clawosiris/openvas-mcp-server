@@ -47,10 +47,18 @@ async fn main() -> anyhow::Result<()> {
             service.waiting().await?;
         }
         Transport::StreamableHttp => {
-            anyhow::bail!(
-                "streamable-http transport is not implemented yet (roadmap phase 6); \
-                 use --transport stdio"
-            );
+            let bind_addr = config.bind_addr;
+            let allowed_hosts = config.allowed_hosts.clone();
+            let server = GvmMcpServer::new(config)?;
+            let listener = tokio::net::TcpListener::bind(bind_addr)
+                .await
+                .with_context(|| format!("failed to bind {bind_addr}"))?;
+            tracing::info!(%bind_addr, "serving MCP over streamable HTTP at /mcp");
+            gvm_mcp::mcp::http::serve(server, listener, &allowed_hosts, async {
+                let _ = tokio::signal::ctrl_c().await;
+                tracing::info!("shutting down");
+            })
+            .await?;
         }
     }
 
