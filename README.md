@@ -23,9 +23,9 @@ MCP client (Claude, etc.)
 ```
 
 > [!NOTE]
-> The previous Python implementation (MCP server + CLI) lives under
-> [`legacy/`](legacy/) until the Rust server's first tagged release, then it
-> will be removed. See the [migration note](#migrating-from-the-python-server).
+> This is a from-scratch Rust rewrite of the original Python
+> server/CLI. If you are coming from the Python version, see the
+> [migration note](#migrating-from-the-python-server).
 
 ## Quick start
 
@@ -151,8 +151,9 @@ The differences that matter:
 - The server no longer speaks GMP directly — it requires a running
   [rust-gvm-api](https://github.com/greenbone-hive/rust-gvm-api) gateway
   (`GVM_SOCKET_PATH`/`GVM_STYLE` are gone, `GVM_GATEWAY_URL` is new).
-- The Python `openvas` CLI is not part of the Rust server; it remains in
-  [`legacy/`](legacy/) until removal.
+- The standalone Python `openvas` CLI is not part of the Rust server. The
+  last Python release remains available in the git history and on tags
+  prior to the Rust rewrite.
 - `openvas_clone_*` and ticket/filter/tag/host write tools are not exposed
   yet: the gateway does not serve those endpoints. They return once the
   gateway does.
