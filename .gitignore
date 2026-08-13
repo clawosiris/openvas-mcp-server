@@ -100,3 +100,8 @@ Thumbs.db
 # Project specific
 *.log
 .config/
+
+
+# Added by cargo
+
+/target
