@@ -118,6 +118,9 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            GVM_MCP_VERSION=${{ needs.validate.outputs.version }}
+            GVM_MCP_VCS_REF=${{ github.sha }}
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ needs.validate.outputs.version }}

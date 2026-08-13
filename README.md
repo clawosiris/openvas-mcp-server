@@ -135,7 +135,7 @@ cargo test --test e2e_live -- --ignored
 
 DTOs and endpoint shapes mirror the gateway's
 [`spec/rest-api`](https://github.com/greenbone-hive/rust-gvm-api/tree/main/spec/rest-api)
-contract. See [docs/mcp](docs/mcp/) for detailed install/usage/development
+contract. See [docs/](docs/) for detailed install/usage/development
 guides.
 
 ## Limitations

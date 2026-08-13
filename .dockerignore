@@ -1,0 +1,20 @@
+# Keep the build context small and reproducible: only Cargo manifests and
+# src/ are needed by the Dockerfile.
+/target
+**/*.rs.bk
+
+.git
+.github
+docs
+journal
+tests
+legacy
+
+*.md
+LICENSE
+docker-compose*.yml
+.gitignore
+.dockerignore
+.env
+*.log
+.DS_Store

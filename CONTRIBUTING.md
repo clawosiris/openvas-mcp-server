@@ -32,7 +32,7 @@ The server is a thin, typed front end over the gateway's REST API — it holds
 → map the response or error. Session handling (lazy login, single-flight
 renewal) and pagination are the only cross-cutting pieces. List tools return
 summarized rows to protect the model's token budget; `get` tools return the
-gateway's JSON unchanged. See [docs/mcp/development.md](docs/mcp/development.md)
+gateway's JSON unchanged. See [docs/development.md](docs/development.md)
 for the module layout.
 
 ## Adding or changing a tool
