@@ -1,61 +1,66 @@
-# MCP Usage
+# Usage
 
-## Overview
+## First contact
 
-The OpenVAS MCP server exposes GVM functionality as MCP tools.
+Ask the model to run `openvas_test_connection`. It verifies, in order:
+gateway liveness (`GET /health`), the gvmd/GMP version, and an
+authenticated session round-trip. Each failure mode produces a distinct,
+actionable message (gateway down vs. bad credentials vs. gvmd unreachable).
 
-## Tool Reference
+## Toolsets and gating
 
-### System
+`gvm-mcp --list-toolsets` prints every toolset. Selection examples:
 
-- `openvas_get_version`
-- `openvas_test_connection`
+```bash
+gvm-mcp                                     # default: everything except identity
+gvm-mcp --read-only                         # reads only (48 tools)
+gvm-mcp --toolsets targets,tasks,reports    # scoped surface
+gvm-mcp --toolsets default,identity         # opt into user administration
+```
 
-### Targets
+`--read-only` removes every mutating tool from the router — clients do not
+even see them in `tools/list`. The `system` toolset (connection test,
+version) is always present.
 
-- `openvas_list_targets`
-- `openvas_get_target`
-- `openvas_create_target`
-- `openvas_delete_target`
+## Filters and pagination
 
-### Tasks (Scans)
+Every list tool accepts:
 
-- `openvas_list_tasks`
-- `openvas_get_task`
-- `openvas_create_task`
-- `openvas_start_task`
-- `openvas_stop_task`
-- `openvas_resume_task`
-- `openvas_delete_task`
-- `openvas_clone_task`
+- `filter` — a GMP filter expression, e.g. `name~web and severity>5`
+- `filter_id` — UUID of a saved filter
+- `page` / `per_page` — 1-indexed pagination (default 25, max 1000)
 
-### Reports
+List tools return summarized rows plus a pagination envelope; use the
+matching `openvas_get_*` tool for the full record.
 
-- `openvas_list_reports`
-- `openvas_get_report`
-- `openvas_get_report_detail`
-- `openvas_get_report_summary`
-- `openvas_export_report`
-- `openvas_delete_report`
+## Typical scan flow
 
-### Utility Services
+1. `openvas_create_target` — hosts, port list, optional credentials
+2. `openvas_list_scan_configs` / `openvas_list_scanners` — pick UUIDs
+3. `openvas_create_task` — bind target + config + scanner
+4. `openvas_start_task` — returns the report UUID for the run
+5. `openvas_get_task` — status/progress until `Done`
+6. `openvas_get_report_results` — findings, filterable
 
-- `openvas_list_scan_configs`
-- `openvas_get_scan_config`
-- `openvas_list_port_lists`
-- `openvas_get_port_list`
-- `openvas_list_schedules`
-- `openvas_get_schedule`
+## Report exports
 
-### Vulnerabilities
+```text
+openvas_export_report        (report format UUID, or omit for native JSON)
+        │  job id, status: queued
+        ▼
+openvas_get_job              (poll until status: succeeded)
+        │
+        ▼
+openvas_download_job_result  (JSON inline; PDF/CSV/XML as base64 ≤ 3 MB)
+```
 
-- `openvas_list_vulnerabilities`
-- `openvas_search_nvts`
+Jobs and artifacts expire ~15 minutes after completion; `openvas_cancel_job`
+aborts a running export. For artifacts larger than 3 MB, export with a
+narrower `filter` or use the JSON format and page through results instead.
 
-## Example Prompts
+## Deletion semantics
 
-- "Show me all scan targets in OpenVAS"
-- "Create a target named 'Web Servers' with hosts 192.168.1.10 and 192.168.1.11"
-- "Start task <uuid> and return the report id"
-- "Export report <uuid> as PDF"
-- "List vulnerabilities for report <uuid> with QoD >= 70"
+Delete tools move resources to gvmd's trashcan by default; pass
+`ultimate: true` for permanent deletion. Deleting a resource that is still
+referenced (e.g. a target used by a task) surfaces the gateway's 409 with
+the reason.
