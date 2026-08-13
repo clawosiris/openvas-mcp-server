@@ -58,6 +58,13 @@ pub struct Cli {
     )]
     pub allowed_hosts: Vec<String>,
 
+    /// Require this bearer token on the streamable-http endpoint. When set,
+    /// requests must carry `Authorization: Bearer <token>`. Unset means no
+    /// inbound authentication (intended for stdio, or HTTP behind a trusted
+    /// proxy that authenticates for you).
+    #[arg(long, env = "MCP_AUTH_TOKEN", hide_env_values = true)]
+    pub auth_token: Option<String>,
+
     /// Comma-separated toolsets to expose ("default", "all", or names from
     /// --list-toolsets). Identity is always opt-in.
     #[arg(long, env = "GVM_TOOLSETS", value_delimiter = ',')]
@@ -89,6 +96,7 @@ pub struct Config {
     pub transport: Transport,
     pub bind_addr: std::net::SocketAddr,
     pub allowed_hosts: Vec<String>,
+    pub auth_token: Option<SecretString>,
     pub toolsets: ToolsetSelection,
     pub read_only: bool,
     pub timeout: Duration,
@@ -134,6 +142,11 @@ impl Config {
 
         let toolsets = ToolsetSelection::parse(&cli.toolsets)?;
 
+        let auth_token = cli
+            .auth_token
+            .filter(|token| !token.is_empty())
+            .map(SecretString::from);
+
         Ok(Self {
             gateway_url: cli.gateway_url,
             username,
@@ -141,6 +154,7 @@ impl Config {
             transport: cli.transport,
             bind_addr: cli.bind_addr,
             allowed_hosts: cli.allowed_hosts,
+            auth_token,
             toolsets,
             read_only: cli.read_only,
             timeout: Duration::from_secs(cli.timeout_secs),

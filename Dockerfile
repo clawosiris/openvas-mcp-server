@@ -41,8 +41,10 @@ LABEL org.opencontainers.image.title="openvas-mcp-server" \
 COPY --from=builder /build/target/release/gvm-mcp /gvm-mcp
 
 # Streamable-HTTP defaults for container use. The Host-header (DNS-rebinding)
-# guard is disabled inside the container network; put a reverse proxy in front
-# if the endpoint is exposed beyond a trusted network.
+# guard is disabled inside the container network. The endpoint is
+# UNAUTHENTICATED unless you set MCP_AUTH_TOKEN (requires
+# `Authorization: Bearer <token>`); otherwise front it with an authenticating
+# reverse proxy that also terminates TLS before exposing it.
 ENV MCP_TRANSPORT=streamable-http \
     MCP_BIND_ADDR=0.0.0.0:8000 \
     MCP_ALLOWED_HOSTS=*

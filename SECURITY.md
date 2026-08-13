@@ -64,6 +64,12 @@ Instead, use **GitHub Private Vulnerability Reporting**:
 - Credentials wrapped in `secrecy::SecretString`; redacted from `Debug` output and never returned in tool responses
 - SBOM (CycloneDX) generated and attached to every release
 
+### Authentication
+
+- **Outbound**: the server authenticates to the rust-gvm-api gateway with a gvmd account, using an ephemeral bearer session (`POST /api/v1/session`) that is renewed automatically. Credentials are never logged or returned.
+- **Inbound (streamable HTTP)**: unauthenticated by default. Set `MCP_AUTH_TOKEN` to require `Authorization: Bearer <token>` (constant-time compared), and/or front the endpoint with an authenticating, TLS-terminating reverse proxy. `MCP_ALLOWED_HOSTS` is a DNS-rebinding guard, not authentication. Do not expose an unauthenticated HTTP endpoint beyond a trusted network.
+- **stdio** has no network surface; access is process-level.
+
 ## Changelog
 
 | Date | Change |

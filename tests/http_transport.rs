@@ -8,13 +8,21 @@ use support::config_for;
 use wiremock::MockServer;
 
 async fn spawn_http_server(allowed_hosts: &[&str]) -> (std::net::SocketAddr, MockServer) {
+    spawn_http_server_with_auth(allowed_hosts, None).await
+}
+
+async fn spawn_http_server_with_auth(
+    allowed_hosts: &[&str],
+    auth_token: Option<&str>,
+) -> (std::net::SocketAddr, MockServer) {
     let gateway = MockServer::start().await;
     let mcp = GvmMcpServer::new(config_for(&gateway)).unwrap();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let hosts: Vec<String> = allowed_hosts.iter().map(|h| h.to_string()).collect();
+    let token = auth_token.map(|t| secrecy::SecretString::from(t.to_string()));
     tokio::spawn(async move {
-        gvm_mcp::mcp::http::serve(mcp, listener, &hosts, std::future::pending())
+        gvm_mcp::mcp::http::serve(mcp, listener, &hosts, token, std::future::pending())
             .await
             .unwrap();
     });
@@ -118,4 +126,50 @@ async fn unlisted_host_header_is_rejected() {
         "expected rejection, got {}",
         response.status()
     );
+}
+
+#[tokio::test]
+async fn auth_token_rejects_missing_and_wrong_bearer() {
+    let (addr, _gateway) = spawn_http_server_with_auth(&["127.0.0.1"], Some("s3cr3t")).await;
+    let client = reqwest::Client::new();
+    let url = format!("http://{addr}/mcp");
+
+    // No Authorization header → 401.
+    let missing = client
+        .post(&url)
+        .header("Accept", "application/json, text/event-stream")
+        .json(&initialize_body())
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    // Wrong token → 401.
+    let wrong = client
+        .post(&url)
+        .header("Accept", "application/json, text/event-stream")
+        .header("Authorization", "Bearer nope")
+        .json(&initialize_body())
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(wrong.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn auth_token_accepts_correct_bearer() {
+    let (addr, _gateway) = spawn_http_server_with_auth(&["127.0.0.1"], Some("s3cr3t")).await;
+    let client = reqwest::Client::new();
+
+    let ok = client
+        .post(format!("http://{addr}/mcp"))
+        .header("Accept", "application/json, text/event-stream")
+        .header("Authorization", "Bearer s3cr3t")
+        .json(&initialize_body())
+        .send()
+        .await
+        .unwrap();
+    assert!(ok.status().is_success(), "got {}", ok.status());
+    let body = parse_payload(&ok.text().await.unwrap());
+    assert_eq!(body["result"]["serverInfo"]["name"], "gvm-mcp");
 }

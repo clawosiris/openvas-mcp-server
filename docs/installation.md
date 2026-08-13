@@ -122,10 +122,31 @@ All flags and their environment variables are documented in the
 | Transport | `MCP_TRANSPORT` | `stdio` (default) or `streamable-http` |
 | Bind address | `MCP_BIND_ADDR` | HTTP only, default `127.0.0.1:8000` |
 | Allowed hosts | `MCP_ALLOWED_HOSTS` | HTTP DNS-rebinding guard; `*` to disable |
+| Auth token | `MCP_AUTH_TOKEN` | HTTP bearer token; unset = unauthenticated |
+
+## Authentication
+
+- **Outbound (server → gateway):** the server logs in to the gateway with
+  `GVM_USERNAME` / `GVM_PASSWORD` and uses an ephemeral bearer session
+  (renewed automatically). Nothing to configure beyond the credentials.
+- **Inbound (client → server):** stdio has no network surface. The
+  streamable-HTTP endpoint is **unauthenticated by default** — set
+  `MCP_AUTH_TOKEN` to require `Authorization: Bearer <token>` on `/mcp`,
+  and/or put an authenticating, TLS-terminating reverse proxy in front.
+  `MCP_ALLOWED_HOSTS` is a DNS-rebinding guard, not authentication.
+
+```bash
+docker run --rm \
+  -e GVM_GATEWAY_URL=http://gateway:8080 \
+  -e GVM_USERNAME=admin -e GVM_PASSWORD=secret \
+  -e MCP_AUTH_TOKEN=$(openssl rand -hex 32) \
+  -p 127.0.0.1:8000:8000 \
+  ghcr.io/greenbone-hive/openvas-mcp-server:latest
+```
 
 ## Secrets
 
 Prefer `GVM_PASSWORD_FILE` (a mounted secret file) over `GVM_PASSWORD` in
-production; it takes precedence when both are set. The password never appears
-in logs, `Debug` output or MCP responses, and the gateway bearer token is
-renewed automatically when it expires.
+production; it takes precedence when both are set. The password and the auth
+token never appear in logs, `Debug` output or MCP responses, and the gateway
+bearer token is renewed automatically when it expires.

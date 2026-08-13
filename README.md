@@ -76,10 +76,30 @@ server uses to create short-lived gateway sessions (renewed automatically).
 | `--transport` | `MCP_TRANSPORT` | `stdio` | `stdio` or `streamable-http` |
 | `--bind-addr` | `MCP_BIND_ADDR` | `127.0.0.1:8000` | HTTP bind address |
 | `--allowed-hosts` | `MCP_ALLOWED_HOSTS` | `localhost,127.0.0.1,::1` | Host-header allow list (`*` disables) |
+| `--auth-token` | `MCP_AUTH_TOKEN` | — | require `Authorization: Bearer <token>` on the HTTP endpoint |
 | `--toolsets` | `GVM_TOOLSETS` | `default` | comma-separated toolset selection |
 | `--read-only` | `GVM_READ_ONLY` | `false` | expose only non-mutating tools |
 | `--timeout-secs` | `GVM_HTTP_TIMEOUT` | `30` | gateway HTTP timeout |
 | `--log-level` | `GVM_LOG_LEVEL` | `info` | log level when `RUST_LOG` unset |
+
+## Authentication
+
+Two independent directions:
+
+- **Server → gateway (outbound):** the server authenticates to the
+  rust-gvm-api gateway with the gvmd account in `GVM_USERNAME` /
+  `GVM_PASSWORD` (`POST /api/v1/session`, Basic → ephemeral bearer token,
+  renewed automatically). Credentials are held in memory as secrets and never
+  logged or returned.
+- **Client → server (inbound):**
+  - **stdio** has no network surface — access is whoever can launch the
+    process.
+  - **streamable HTTP** is unauthenticated by default. Set `--auth-token`
+    (`MCP_AUTH_TOKEN`) to require `Authorization: Bearer <token>` on `/mcp`,
+    and/or put an authenticating reverse proxy (which also terminates TLS) in
+    front. `--allowed-hosts` is only a DNS-rebinding guard, not
+    authentication. Do not expose an unauthenticated endpoint beyond a trusted
+    network.
 
 ## Toolsets
 

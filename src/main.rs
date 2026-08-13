@@ -49,12 +49,13 @@ async fn main() -> anyhow::Result<()> {
         Transport::StreamableHttp => {
             let bind_addr = config.bind_addr;
             let allowed_hosts = config.allowed_hosts.clone();
+            let auth_token = config.auth_token.clone();
             let server = GvmMcpServer::new(config)?;
             let listener = tokio::net::TcpListener::bind(bind_addr)
                 .await
                 .with_context(|| format!("failed to bind {bind_addr}"))?;
             tracing::info!(%bind_addr, "serving MCP over streamable HTTP at /mcp");
-            gvm_mcp::mcp::http::serve(server, listener, &allowed_hosts, async {
+            gvm_mcp::mcp::http::serve(server, listener, &allowed_hosts, auth_token, async {
                 let _ = tokio::signal::ctrl_c().await;
                 tracing::info!("shutting down");
             })

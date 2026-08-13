@@ -30,7 +30,10 @@ services:
       GVM_PASSWORD: ${GVM_PASSWORD:?Set GVM_PASSWORD}
       # Streamable-HTTP defaults are baked into the image
       # (MCP_TRANSPORT=streamable-http, MCP_BIND_ADDR=0.0.0.0:8000,
-      # MCP_ALLOWED_HOSTS=*). Optional hardening / shaping:
+      # MCP_ALLOWED_HOSTS=*). The endpoint is UNAUTHENTICATED unless you set
+      # an auth token — strongly recommended if reachable beyond this host:
+      # MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:?Set MCP_AUTH_TOKEN}
+      # Optional hardening / shaping:
       # GVM_READ_ONLY: "true"
       # GVM_TOOLSETS: "targets,tasks,reports"
 
