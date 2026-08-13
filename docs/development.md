@@ -7,8 +7,8 @@ src/
   main.rs            CLI entry: transport selection, logging (stderr)
   config.rs          clap CLI → validated Config
   gateway/           HTTP client for the rust-gvm-api gateway
-    client.rs        request plumbing, bearer injection, 401 retry
-    session.rs       SessionManager: lazy login, single-flight renewal
+    client.rs        request plumbing; attaches per-request Authorization
+    auth.rs          caller-identity forwarding (task-local) + Basic fallback
     models.rs        serde DTOs mirroring the gateway spec
     error.rs         RFC 9457 problem+json → typed GatewayError
   mcp/
@@ -21,8 +21,10 @@ tests/               mock-gateway (wiremock) integration tests
 ```
 
 Principles (from the roadmap): no business logic in this server — a tool is
-validate args → build gateway request → map response/error. Session handling
-and pagination are the only cross-cutting "smart" pieces. List output is
+validate args → build gateway request → map response/error. Identity
+forwarding (the caller's `Authorization`, scoped per call by `server.rs`'s
+`call_tool`) and pagination are the only cross-cutting "smart" pieces. List
+output is
 summarized (token budget); `get` output is the gateway's JSON, unchanged.
 
 ## Adding a tool

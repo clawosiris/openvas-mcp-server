@@ -3,13 +3,19 @@
 
 use std::sync::Arc;
 
+use rmcp::ErrorData as McpError;
 use rmcp::handler::server::ServerHandler;
 use rmcp::handler::server::router::tool::ToolRouter;
-use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
-use rmcp::tool_handler;
+use rmcp::handler::server::tool::ToolCallContext;
+use rmcp::model::{
+    CallToolRequestParams, CallToolResponse, Implementation, ListToolsResult,
+    PaginatedRequestParams, ServerCapabilities, ServerInfo,
+};
+use rmcp::service::{RequestContext, RoleServer};
 
 use crate::config::Config;
 use crate::gateway::GatewayClient;
+use crate::gateway::auth::CALLER_AUTH;
 use crate::mcp::toolset::Toolset;
 
 #[derive(Clone)]
@@ -94,8 +100,41 @@ impl GvmMcpServer {
     }
 }
 
-#[tool_handler(router = self.tool_router)]
 impl ServerHandler for GvmMcpServer {
+    /// Dispatch a tool call, forwarding the inbound caller's `Authorization`
+    /// (streamable HTTP) to the gateway for the duration of the call. The
+    /// header is read from the request's `http::request::Parts` extension,
+    /// which rmcp's streamable-HTTP transport inserts; stdio has no such
+    /// extension, so the gateway client falls back to configured credentials.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, McpError> {
+        let caller_auth = context
+            .extensions
+            .get::<http::request::Parts>()
+            .and_then(|parts| parts.headers.get(http::header::AUTHORIZATION))
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned);
+
+        let call = self
+            .tool_router
+            .call(ToolCallContext::new(self, request, context));
+        CALLER_AUTH.scope(caller_auth, call).await
+    }
+
+    async fn list_tools(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListToolsResult, McpError> {
+        Ok(ListToolsResult {
+            tools: self.tool_router.list_all(),
+            ..Default::default()
+        })
+    }
+
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(

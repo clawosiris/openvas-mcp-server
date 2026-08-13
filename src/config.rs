@@ -27,7 +27,9 @@ pub struct Cli {
     #[arg(long, env = "GVM_GATEWAY_URL", default_value = "http://127.0.0.1:8080")]
     pub gateway_url: Url,
 
-    /// gvmd username used to create gateway sessions
+    /// gvmd username the server forwards to the gateway when the caller sends
+    /// no credentials (stdio, or an HTTP caller without an Authorization
+    /// header). Optional: HTTP callers may instead authenticate as themselves.
     #[arg(long, env = "GVM_USERNAME")]
     pub username: Option<String>,
 
@@ -84,8 +86,8 @@ pub struct Cli {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub gateway_url: Url,
-    pub username: String,
-    pub password: SecretString,
+    pub username: Option<String>,
+    pub password: Option<SecretString>,
     pub transport: Transport,
     pub bind_addr: std::net::SocketAddr,
     pub allowed_hosts: Vec<String>,
@@ -106,10 +108,11 @@ impl Config {
             bail!("gateway URL has no host: '{}'", cli.gateway_url);
         }
 
-        let username = cli
-            .username
-            .filter(|u| !u.is_empty())
-            .context("gvmd username is required (--username or GVM_USERNAME)")?;
+        // Credentials are optional: gvm-mcp forwards the caller's identity to
+        // the gateway and only falls back to these when the caller sends none.
+        // When absent and no caller header is present, gateway calls go out
+        // unauthenticated and are rejected with 401.
+        let username = cli.username.filter(|u| !u.is_empty());
 
         let password = match &cli.password_file {
             Some(path) => {
@@ -120,16 +123,22 @@ impl Config {
                 if trimmed.is_empty() {
                     bail!("password file '{}' is empty", path.display());
                 }
-                trimmed.to_owned()
+                Some(trimmed.to_owned())
             }
-            None => cli
-                .password
-                .filter(|p| !p.is_empty())
-                .context("gvmd password is required (GVM_PASSWORD or --password-file)")?,
+            None => cli.password.filter(|p| !p.is_empty()),
         };
 
         if cli.timeout_secs == 0 {
             bail!("--timeout-secs must be greater than 0");
+        }
+
+        // A username without a password (or vice versa) cannot form a fallback
+        // credential and is almost always a misconfiguration.
+        if username.is_some() != password.is_some() {
+            bail!(
+                "gvmd username and password must be set together (or both omitted \
+                 to rely on caller-forwarded credentials)"
+            );
         }
 
         let toolsets = ToolsetSelection::parse(&cli.toolsets)?;
@@ -137,7 +146,7 @@ impl Config {
         Ok(Self {
             gateway_url: cli.gateway_url,
             username,
-            password: SecretString::from(password),
+            password: password.map(SecretString::from),
             transport: cli.transport,
             bind_addr: cli.bind_addr,
             allowed_hosts: cli.allowed_hosts,
@@ -167,26 +176,36 @@ mod tests {
     #[test]
     fn builds_config_from_flags() {
         let config = Config::from_cli(base_cli()).unwrap();
-        assert_eq!(config.username, "admin");
+        assert_eq!(config.username.as_deref(), Some("admin"));
         assert_eq!(config.gateway_url.as_str(), "http://gateway.example:8080/");
         assert_eq!(config.timeout, Duration::from_secs(30));
         assert!(!config.read_only);
     }
 
     #[test]
-    fn rejects_missing_username() {
+    fn credentials_are_optional_when_both_omitted() {
         let mut cli = base_cli();
         cli.username = None;
-        let err = Config::from_cli(cli).unwrap_err();
-        assert!(err.to_string().contains("username"));
+        cli.password = None;
+        let config = Config::from_cli(cli).unwrap();
+        assert!(config.username.is_none());
+        assert!(config.password.is_none());
     }
 
     #[test]
-    fn rejects_missing_password() {
+    fn rejects_username_without_password() {
         let mut cli = base_cli();
         cli.password = None;
         let err = Config::from_cli(cli).unwrap_err();
-        assert!(err.to_string().contains("password"));
+        assert!(err.to_string().contains("together"));
+    }
+
+    #[test]
+    fn rejects_password_without_username() {
+        let mut cli = base_cli();
+        cli.username = None;
+        let err = Config::from_cli(cli).unwrap_err();
+        assert!(err.to_string().contains("together"));
     }
 
     #[test]
@@ -208,7 +227,10 @@ mod tests {
         cli.password_file = Some(path.clone());
         let config = Config::from_cli(cli).unwrap();
         use secrecy::ExposeSecret;
-        assert_eq!(config.password.expose_secret(), "from-file");
+        assert_eq!(
+            config.password.as_ref().map(|p| p.expose_secret()),
+            Some("from-file")
+        );
         std::fs::remove_file(path).ok();
     }
 

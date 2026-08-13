@@ -9,8 +9,8 @@ use gvm_mcp::mcp::tools::common::{DeleteParams, GetByIdParams, ListParams};
 use gvm_mcp::mcp::tools::tasks::CreateTaskParams;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock};
-use support::{config_for, mount_login_once, problem_response};
-use wiremock::matchers::{body_partial_json, method, path, query_param};
+use support::{EXPECTED_BASIC, config_for, problem_response};
+use wiremock::matchers::{body_partial_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn text_of(result: &CallToolResult) -> String {
@@ -31,7 +31,6 @@ fn json_of(result: &CallToolResult) -> serde_json::Value {
 
 async fn server_with_login() -> (MockServer, GvmMcpServer) {
     let server = MockServer::start().await;
-    mount_login_once(&server, "token-a").await;
     let mcp = GvmMcpServer::new(config_for(&server)).unwrap();
     (server, mcp)
 }
@@ -293,29 +292,14 @@ async fn delete_task_defaults_to_trashcan_and_supports_ultimate() {
 }
 
 #[tokio::test]
-async fn write_tool_renews_session_on_401_and_retries() {
+async fn write_tool_forwards_fallback_basic_credential() {
     let server = MockServer::start().await;
-    mount_login_once(&server, "token-a").await;
-    Mock::given(method("POST"))
-        .and(path("/api/v1/session"))
-        .respond_with(
-            ResponseTemplate::new(201).set_body_json(support::session_created_body("token-b")),
-        )
-        .up_to_n_times(1)
-        .expect(1)
-        .mount(&server)
-        .await;
-
+    // The gateway only answers when the request carries the configured
+    // fallback Basic credential — proving gvm-mcp forwards an identity per
+    // request rather than logging in and reusing a session token.
     Mock::given(method("POST"))
         .and(path("/api/v1/tasks/t-1/start"))
-        .and(wiremock::matchers::bearer_token("token-a"))
-        .respond_with(problem_response(401, "session_expired", "Session Expired"))
-        .expect(1)
-        .mount(&server)
-        .await;
-    Mock::given(method("POST"))
-        .and(path("/api/v1/tasks/t-1/start"))
-        .and(wiremock::matchers::bearer_token("token-b"))
+        .and(header("authorization", EXPECTED_BASIC))
         .respond_with(
             ResponseTemplate::new(200).set_body_json(serde_json::json!({"reportId": "r-1"})),
         )

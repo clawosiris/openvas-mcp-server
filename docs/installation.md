@@ -15,8 +15,10 @@ install method below.
    HTTP. Its `compose.yaml` / `scripts/compose-dev.sh` bring up a full local
    `gvmd` + gateway stack; note the gateway URL (default
    `http://localhost:8080`).
-3. A gvmd account for the server to authenticate with. Prefer a dedicated
-   account; pair it with `--read-only` for reporting-only deployments.
+3. A gvmd identity to authenticate with. gvm-mcp forwards a caller's gvmd
+   identity to the gateway (see [Authentication](#authentication)); for
+   stdio, configure a fallback account and pair it with `--read-only` for
+   reporting-only deployments.
 
 Verify the gateway is reachable before starting the server:
 
@@ -117,15 +119,35 @@ All flags and their environment variables are documented in the
 | Setting | Env | Notes |
 | ------- | --- | ----- |
 | Gateway URL | `GVM_GATEWAY_URL` | Origin of the rust-gvm-api gateway (no `/api/v1`) |
-| Username | `GVM_USERNAME` | gvmd account |
+| Username | `GVM_USERNAME` | gvmd fallback identity (optional) |
 | Password | `GVM_PASSWORD` / `GVM_PASSWORD_FILE` | Prefer the file form in production |
 | Transport | `MCP_TRANSPORT` | `stdio` (default) or `streamable-http` |
 | Bind address | `MCP_BIND_ADDR` | HTTP only, default `127.0.0.1:8000` |
 | Allowed hosts | `MCP_ALLOWED_HOSTS` | HTTP DNS-rebinding guard; `*` to disable |
 
+## Authentication
+
+gvm-mcp holds no session and invents no auth of its own — it forwards a
+caller's gvmd identity to the gateway, and gvmd is the sole authority. The
+`Authorization` used for each gateway call is resolved per request:
+
+- **stdio / fallback**: a `Basic` header built from `GVM_USERNAME` /
+  `GVM_PASSWORD`. This is the identity for stdio clients and for HTTP callers
+  that send no `Authorization`.
+- **streamable HTTP, per caller**: if the inbound MCP request carries an
+  `Authorization` header (a gateway session token, or `Basic` gvmd
+  credentials), gvm-mcp forwards it verbatim, so each HTTP caller
+  authenticates as themselves and gvmd enforces their permissions.
+
+If neither is available the request goes out unauthenticated and the gateway
+answers `401`. Credentials are optional — omit `GVM_USERNAME` / `GVM_PASSWORD`
+to require every HTTP caller to authenticate as themselves. `MCP_ALLOWED_HOSTS`
+is a DNS-rebinding guard, not authentication; terminate TLS at a reverse proxy
+for public HTTP deployments.
+
 ## Secrets
 
 Prefer `GVM_PASSWORD_FILE` (a mounted secret file) over `GVM_PASSWORD` in
-production; it takes precedence when both are set. The password never appears
-in logs, `Debug` output or MCP responses, and the gateway bearer token is
-renewed automatically when it expires.
+production; it takes precedence when both are set. Passwords and forwarded
+tokens never appear in logs, `Debug` output or MCP responses, and no
+credential is cached as a session.
